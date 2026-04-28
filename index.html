@@ -598,7 +598,7 @@ const SNAMES = {H:'Hearts',D:'Diamonds',C:'Clubs',S:'Spades'};
 
 let mode='pos-to-card', deck=[], idx=0, round=1;
 let running=false, phaseTimer=null;
-let cardPhrases=[], posPhrases=[], linkPhrases=[];
+let cardPhrases=[], posPhrases=[], linkPhrases=[], introPhrases=[];
 let sessionStart=null, sessionTimer=null, sessionSeconds=0;
 let currentAudio=null;
 
@@ -679,6 +679,10 @@ async function reloadPhrases() {
   for (let i = 1; i <= 20; i++) {
     const url = AUDIO_BASE+'link'+i+'.mp3';
     if (await tryLoad(url)) { linkPhrases.push(url); preloadAudio(url); } else break;
+  }
+  for (let i = 1; i <= 20; i++) {
+    const url = AUDIO_BASE+'intro'+i+'.mp3';
+    if (await tryLoad(url)) { introPhrases.push(url); preloadAudio(url); } else break;
   }
   // Preload all 52 card name files and position number files
   const VCODES = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
@@ -795,9 +799,15 @@ function animateBar(ms) {
 function stopBar() { const bar=document.getElementById('timer-bar'); bar.style.transition='none'; bar.style.width='100%'; }
 
 function playQuestion(card, onDone) {
-  const link = linkPhrases.length ? rand(linkPhrases) : null;
-  if(card.qtype==='pos-to-card') playChain([link, rand(cardPhrases.length?cardPhrases:[null]),AUDIO_BASE+'pos_'+card.pos+'.mp3'],onDone);
-  else playChain([link, rand(posPhrases.length?posPhrases:[null]),AUDIO_BASE+'card_'+card.v+card.s+'.mp3'],onDone);
+  const isFirst = idx === 0 && round === 1;
+  let prefix = null;
+  if (isFirst) {
+    prefix = introPhrases.length ? rand(introPhrases) : null;
+  } else {
+    prefix = linkPhrases.length ? rand(linkPhrases) : null;
+  }
+  if(card.qtype==='pos-to-card') playChain([prefix, rand(cardPhrases.length?cardPhrases:[null]),AUDIO_BASE+'pos_'+card.pos+'.mp3'],onDone);
+  else playChain([prefix, rand(posPhrases.length?posPhrases:[null]),AUDIO_BASE+'card_'+card.v+card.s+'.mp3'],onDone);
 }
 
 function playAnswer(card, onDone) {
