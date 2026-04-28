@@ -162,7 +162,7 @@
 const AUDIO_BASE = 'https://ilkleyman.github.io/mnemonica-audio/audio/';
 const JSONBIN_KEY = '$2a$10$JVbcJI4T4huSZPjzJcrydOkeFpAfTqp1pdowSu4OQLRxClvgiwR42';
 const JSONBIN_API = 'https://api.jsonbin.io/v3/b';
-let BIN_ID = localStorage.getItem('mnemonica_bin_id') || null;
+const BIN_ID = '69f0f3ffaaba8821974acdb9';
 
 const STACK = [
   {pos:1,v:'4',s:'C'},{pos:2,v:'2',s:'H'},{pos:3,v:'7',s:'D'},{pos:4,v:'3',s:'C'},
@@ -209,19 +209,8 @@ async function loadBin() {
 
 async function saveBin(data) {
   const headers = { 'X-Access-Key': JSONBIN_KEY, 'Content-Type': 'application/json' };
-  if (!BIN_ID) {
-    const r = await fetch(JSONBIN_API, {
-      method: 'POST',
-      headers: { ...headers, 'X-Bin-Name': 'mnemonica-log', 'X-Bin-Private': 'true' },
-      body: JSON.stringify(data)
-    });
-    if (!r.ok) throw new Error('create failed');
-    BIN_ID = (await r.json()).metadata.id;
-    localStorage.setItem('mnemonica_bin_id', BIN_ID);
-  } else {
-    const r = await fetch(`${JSONBIN_API}/${BIN_ID}`, { method: 'PUT', headers, body: JSON.stringify(data) });
-    if (!r.ok) throw new Error('update failed');
-  }
+  const r = await fetch(`${JSONBIN_API}/${BIN_ID}`, { method: 'PUT', headers, body: JSON.stringify(data) });
+  if (!r.ok) throw new Error('update failed');
 }
 
 /* ── Audio ── */
