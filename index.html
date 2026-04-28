@@ -583,12 +583,12 @@ const STACK = [
   {pos:17,v:'9',s:'H'},{pos:18,v:'K',s:'C'},{pos:19,v:'2',s:'D'},{pos:20,v:'J',s:'H'},
   {pos:21,v:'3',s:'S'},{pos:22,v:'8',s:'S'},{pos:23,v:'6',s:'H'},{pos:24,v:'10',s:'C'},
   {pos:25,v:'5',s:'D'},{pos:26,v:'K',s:'D'},{pos:27,v:'2',s:'C'},{pos:28,v:'3',s:'H'},
-  {pos:29,v:'Q',s:'S'},{pos:30,v:'A',s:'C'},{pos:31,v:'6',s:'C'},{pos:32,v:'9',s:'D'},
-  {pos:33,v:'K',s:'H'},{pos:34,v:'10',s:'S'},{pos:35,v:'5',s:'C'},{pos:36,v:'K',s:'S'},
-  {pos:37,v:'8',s:'D'},{pos:38,v:'J',s:'S'},{pos:39,v:'A',s:'H'},{pos:40,v:'4',s:'S'},
-  {pos:41,v:'7',s:'H'},{pos:42,v:'4',s:'D'},{pos:43,v:'7',s:'C'},{pos:44,v:'10',s:'H'},
-  {pos:45,v:'J',s:'D'},{pos:46,v:'J',s:'C'},{pos:47,v:'Q',s:'D'},{pos:48,v:'7',s:'S'},
-  {pos:49,v:'A',s:'D'},{pos:50,v:'10',s:'D'},{pos:51,v:'8',s:'C'},{pos:52,v:'9',s:'C'}
+  {pos:29,v:'8',s:'D'},{pos:30,v:'5',s:'C'},{pos:31,v:'K',s:'S'},{pos:32,v:'J',s:'D'},
+  {pos:33,v:'8',s:'C'},{pos:34,v:'10',s:'S'},{pos:35,v:'K',s:'H'},{pos:36,v:'J',s:'C'},
+  {pos:37,v:'7',s:'S'},{pos:38,v:'10',s:'H'},{pos:39,v:'A',s:'D'},{pos:40,v:'4',s:'S'},
+  {pos:41,v:'7',s:'H'},{pos:42,v:'4',s:'D'},{pos:43,v:'A',s:'C'},{pos:44,v:'9',s:'C'},
+  {pos:45,v:'J',s:'S'},{pos:46,v:'Q',s:'D'},{pos:47,v:'7',s:'C'},{pos:48,v:'Q',s:'S'},
+  {pos:49,v:'10',s:'D'},{pos:50,v:'6',s:'C'},{pos:51,v:'A',s:'H'},{pos:52,v:'9',s:'D'}
 ];
 
 const SUITS = {H:'♥',D:'♦',C:'♣',S:'♠'};
@@ -598,7 +598,7 @@ const SNAMES = {H:'Hearts',D:'Diamonds',C:'Clubs',S:'Spades'};
 
 let mode='pos-to-card', deck=[], idx=0, round=1;
 let running=false, phaseTimer=null;
-let cardPhrases=[], posPhrases=[];
+let cardPhrases=[], posPhrases=[], linkPhrases=[];
 let sessionStart=null, sessionTimer=null, sessionSeconds=0;
 let currentAudio=null;
 
@@ -655,12 +655,15 @@ function tryLoad(url) {
 }
 
 async function reloadPhrases() {
-  cardPhrases = []; posPhrases = [];
+  cardPhrases = []; posPhrases = []; linkPhrases = [];
   for (let i = 1; i <= 20; i++) {
     if (await tryLoad(AUDIO_BASE+'card'+i+'.mp3')) cardPhrases.push(AUDIO_BASE+'card'+i+'.mp3'); else break;
   }
   for (let i = 1; i <= 20; i++) {
     if (await tryLoad(AUDIO_BASE+'position'+i+'.mp3')) posPhrases.push(AUDIO_BASE+'position'+i+'.mp3'); else break;
+  }
+  for (let i = 1; i <= 20; i++) {
+    if (await tryLoad(AUDIO_BASE+'link'+i+'.mp3')) linkPhrases.push(AUDIO_BASE+'link'+i+'.mp3'); else break;
   }
 }
 
@@ -764,8 +767,9 @@ function animateBar(ms) {
 function stopBar() { const bar=document.getElementById('timer-bar'); bar.style.transition='none'; bar.style.width='100%'; }
 
 function playQuestion(card, onDone) {
-  if(card.qtype==='pos-to-card') playChain([rand(cardPhrases.length?cardPhrases:[null]),AUDIO_BASE+'pos_'+card.pos+'.mp3'],onDone);
-  else playChain([rand(posPhrases.length?posPhrases:[null]),AUDIO_BASE+'card_'+card.v+card.s+'.mp3'],onDone);
+  const link = linkPhrases.length ? rand(linkPhrases) : null;
+  if(card.qtype==='pos-to-card') playChain([link, rand(cardPhrases.length?cardPhrases:[null]),AUDIO_BASE+'pos_'+card.pos+'.mp3'],onDone);
+  else playChain([link, rand(posPhrases.length?posPhrases:[null]),AUDIO_BASE+'card_'+card.v+card.s+'.mp3'],onDone);
 }
 
 function playAnswer(card, onDone) {
@@ -778,6 +782,7 @@ function showCard() {
   if(!running) return;
   const card=deck[idx];
   const delay=parseInt(document.getElementById('delay-sel').value)||3000;
+  const answerGap = 1500;
   document.getElementById('card-scene').classList.remove('flipped');
   renderFront(card); renderBack(card); updateProgress();
   playQuestion(card, ()=>{
@@ -789,13 +794,13 @@ function showCard() {
       document.getElementById('card-scene').classList.add('flipped');
       playAnswer(card, ()=>{
         if(!running) return;
-        animateBar(delay);
+        animateBar(answerGap);
         phaseTimer=setTimeout(()=>{
           if(!running) return;
           idx++;
           if(idx>=deck.length){round++;deck=buildDeck(getRange());idx=0;}
           showCard();
-        },delay);
+        },answerGap);
       });
     },delay);
   });
