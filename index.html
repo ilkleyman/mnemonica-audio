@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mnemonica Flashcards</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f5f0;
+    color: #1a1a1a;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  .app {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 20px;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+    color: #1a1a1a;
+  }
+
+  .url-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 1.25rem;
+  }
+
+  .url-label {
+    font-size: 12px;
+    color: #666;
+    white-space: nowrap;
+  }
+
+  .url-row input {
+    flex: 1;
+    padding: 7px 10px;
+    font-size: 12px;
+    font-family: monospace;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    color: #1a1a1a;
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 1.25rem;
+  }
+
+  .mode-toggle {
+    display: flex;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .mode-btn {
+    padding: 7px 13px;
+    font-size: 13px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #666;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+
+  .mode-btn.active {
+    background: #e8e8e4;
+    color: #1a1a1a;
+    font-weight: 500;
+  }
+
+  .range-group {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    color: #666;
+  }
+
+  .range-group input[type=number] {
+    width: 52px;
+    padding: 6px 8px;
+    font-size: 13px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    color: #1a1a1a;
+    text-align: center;
+  }
+
+  .delay-group {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    color: #666;
+  }
+
+  .delay-group select {
+    padding: 6px 10px;
+    font-size: 13px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    color: #1a1a1a;
+    cursor: pointer;
+  }
+
+  .action-btn {
+    padding: 7px 14px;
+    font-size: 13px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    color: #1a1a1a;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .action-btn:hover { background: #e8e8e4; }
+
+  .progress-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .progress { font-size: 13px; color: #666; }
+  .progress strong { color: #1a1a1a; font-weight: 500; }
+
+  .round-badge {
+    font-size: 12px;
+    color: #666;
+    background: #e8e8e4;
+    border-radius: 999px;
+    padding: 3px 10px;
+    border: 1px solid #ddd;
+  }
+
+  .card-scene {
+    width: 100%;
+    height: 260px;
+    perspective: 1000px;
+    margin-bottom: 1rem;
+  }
+
+  .card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.55s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .card-scene.flipped .card-inner { transform: rotateY(180deg); }
+
+  .card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 16px;
+    border: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 1.5rem;
+  }
+
+  .card-front { background: #fff; }
+  .card-back { background: #f0f0eb; transform: rotateY(180deg); }
+
+  .suit-symbol { font-size: 52px; line-height: 1; }
+  .card-label { font-size: 22px; font-weight: 500; }
+  .card-sublabel { font-size: 13px; color: #888; }
+  .position-number { font-size: 56px; font-weight: 500; line-height: 1; color: #1a1a1a; }
+  .phase-label { font-size: 11px; color: #aaa; letter-spacing: 0.06em; text-transform: uppercase; }
+  .red { color: #c0392b; }
+
+  .timer-wrap {
+    height: 3px;
+    background: #e0e0da;
+    border-radius: 2px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+  }
+
+  .timer-bar {
+    height: 3px;
+    background: #999;
+    border-radius: 2px;
+    width: 100%;
+  }
+
+  .play-row {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+  }
+
+  .big-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 40px;
+    font-size: 16px;
+    font-weight: 500;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    background: #fff;
+    color: #1a1a1a;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .big-btn:hover { background: #e8e8e4; }
+  .big-btn.running { border-color: #e74c3c; color: #e74c3c; }
+
+  .log-section {
+    border-top: 1px solid #e0e0da;
+    padding-top: 1.25rem;
+  }
+
+  .log-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1a1a1a;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .log-clear {
+    font-size: 12px;
+    color: #999;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+  }
+
+  .log-clear:hover { color: #e74c3c; }
+
+  .session-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 1rem;
+  }
+
+  .stat {
+    background: #e8e8e4;
+    border-radius: 8px;
+    padding: 10px 14px;
+    flex: 1;
+  }
+
+  .stat-label { font-size: 12px; color: #888; margin-bottom: 3px; }
+  .stat-val { font-size: 20px; font-weight: 500; color: #1a1a1a; }
+
+  .log-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px;
+  }
+
+  .log-card {
+    background: #fff;
+    border: 1px solid #e0e0da;
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+
+  .log-date { font-size: 12px; color: #888; margin-bottom: 3px; }
+  .log-time { font-size: 18px; font-weight: 500; color: #1a1a1a; }
+  .log-sessions { font-size: 12px; color: #aaa; }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #ccc;
+    display: inline-block;
+    margin-right: 6px;
+    transition: background 0.3s;
+  }
+
+  .status-dot.active { background: #27ae60; }
+
+  .no-log { font-size: 13px; color: #aaa; }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Mnemonica flashcards</h1>
+
+  <div class="url-row">
+    <span class="url-label">Audio URL</span>
+    <input type="text" id="base-url" value="https://ilkleyman.github.io/mnemonica-audio/audio/" />
+    <button class="action-btn" onclick="reloadPhrases()">Reload</button>
+  </div>
+
+  <div class="controls">
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="btn-ptc" onclick="setMode('pos-to-card')">Position → Card</button>
+      <button class="mode-btn" id="btn-ctp" onclick="setMode('card-to-pos')">Card → Position</button>
+      <button class="mode-btn" id="btn-mix" onclick="setMode('mixed')">Mixed</button>
+    </div>
+    <div class="range-group">
+      <span>Cards</span>
+      <input type="number" id="range-from" value="1" min="1" max="52" />
+      <span>to</span>
+      <input type="number" id="range-to" value="52" min="1" max="52" />
+      <button class="action-btn" onclick="applyRange()">Apply</button>
+    </div>
+    <div class="delay-group">
+      <span>Delay</span>
+      <select id="delay-sel">
+        <option value="1500">1.5s</option>
+        <option value="2000">2s</option>
+        <option value="3000" selected>3s</option>
+        <option value="4000">4s</option>
+        <option value="5000">5s</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="progress-row">
+    <div class="progress" id="progress">Ready</div>
+    <div class="round-badge" id="round-badge">Round 1</div>
+  </div>
+
+  <div class="card-scene" id="card-scene">
+    <div class="card-inner" id="card-inner">
+      <div class="card-face card-front" id="front-face">
+        <div class="position-number" style="color:#ccc">—</div>
+        <div class="card-sublabel">Press start to begin</div>
+      </div>
+      <div class="card-face card-back" id="back-face">
+        <div class="card-sublabel" style="color:#ccc">Answer will appear here</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="timer-wrap"><div class="timer-bar" id="timer-bar"></div></div>
+
+  <div class="play-row">
+    <button class="big-btn" id="play-btn" onclick="togglePlay()">
+      <svg id="play-icon" width="16" height="16" viewBox="0 0 16 16">
+        <polygon points="4,2 14,8 4,14" fill="currentColor"/>
+      </svg>
+      <span id="play-label">Start</span>
+    </button>
+  </div>
+
+  <div class="log-section">
+    <div class="log-title">
+      <span><span class="status-dot" id="session-dot"></span>Practice log</span>
+      <button class="log-clear" onclick="clearLog()">Clear log</button>
+    </div>
+    <div class="session-row">
+      <div class="stat"><div class="stat-label">This session</div><div class="stat-val" id="session-time">0:00</div></div>
+      <div class="stat"><div class="stat-label">Today total</div><div class="stat-val" id="today-time">0:00</div></div>
+      <div class="stat"><div class="stat-label">All time</div><div class="stat-val" id="alltime-time">0:00</div></div>
+    </div>
+    <div class="log-grid" id="log-grid"></div>
+  </div>
+</div>
+
+<script>
+const STACK = [
+  {pos:1,v:'4',s:'C'},{pos:2,v:'2',s:'H'},{pos:3,v:'7',s:'D'},{pos:4,v:'3',s:'C'},
+  {pos:5,v:'4',s:'H'},{pos:6,v:'6',s:'D'},{pos:7,v:'A',s:'S'},{pos:8,v:'5',s:'H'},
+  {pos:9,v:'9',s:'S'},{pos:10,v:'2',s:'S'},{pos:11,v:'Q',s:'H'},{pos:12,v:'3',s:'D'},
+  {pos:13,v:'Q',s:'C'},{pos:14,v:'8',s:'H'},{pos:15,v:'6',s:'S'},{pos:16,v:'5',s:'S'},
+  {pos:17,v:'9',s:'H'},{pos:18,v:'K',s:'C'},{pos:19,v:'2',s:'D'},{pos:20,v:'J',s:'H'},
+  {pos:21,v:'3',s:'S'},{pos:22,v:'8',s:'S'},{pos:23,v:'6',s:'H'},{pos:24,v:'10',s:'C'},
+  {pos:25,v:'5',s:'D'},{pos:26,v:'K',s:'D'},{pos:27,v:'2',s:'C'},{pos:28,v:'3',s:'H'},
+  {pos:29,v:'Q',s:'S'},{pos:30,v:'A',s:'C'},{pos:31,v:'6',s:'C'},{pos:32,v:'9',s:'D'},
+  {pos:33,v:'K',s:'H'},{pos:34,v:'10',s:'S'},{pos:35,v:'5',s:'C'},{pos:36,v:'K',s:'S'},
+  {pos:37,v:'8',s:'D'},{pos:38,v:'J',s:'S'},{pos:39,v:'A',s:'H'},{pos:40,v:'4',s:'S'},
+  {pos:41,v:'7',s:'H'},{pos:42,v:'4',s:'D'},{pos:43,v:'7',s:'C'},{pos:44,v:'10',s:'H'},
+  {pos:45,v:'J',s:'D'},{pos:46,v:'J',s:'C'},{pos:47,v:'Q',s:'D'},{pos:48,v:'7',s:'S'},
+  {pos:49,v:'A',s:'D'},{pos:50,v:'10',s:'D'},{pos:51,v:'8',s:'C'},{pos:52,v:'9',s:'C'}
+];
+
+const SUITS = {H:'♥',D:'♦',C:'♣',S:'♠'};
+const RED = ['H','D'];
+const VNAMES = {A:'Ace','2':'Two','3':'Three','4':'Four','5':'Five','6':'Six','7':'Seven','8':'Eight','9':'Nine','10':'Ten',J:'Jack',Q:'Queen',K:'King'};
+const SNAMES = {H:'Hearts',D:'Diamonds',C:'Clubs',S:'Spades'};
+
+let mode = 'pos-to-card';
+let deck = [];
+let idx = 0;
+let round = 1;
+let running = false;
+let phaseTimer = null;
+let cardPhrases = [];
+let posPhrases = [];
+let sessionStart = null;
+let sessionTimer = null;
+let sessionSeconds = 0;
+let currentAudio = null;
+
+function baseUrl() {
+  let u = document.getElementById('base-url').value.trim();
+  if (!u.endsWith('/')) u += '/';
+  return u;
+}
+
+function tryLoad(url) {
+  return new Promise(resolve => {
+    const a = new Audio();
+    a.oncanplaythrough = () => resolve(true);
+    a.onerror = () => resolve(false);
+    a.src = url;
+    a.load();
+  });
+}
+
+async function reloadPhrases() {
+  cardPhrases = [];
+  posPhrases = [];
+  const base = baseUrl();
+  for (let i = 1; i <= 20; i++) {
+    const ok = await tryLoad(base + 'card' + i + '.mp3');
+    if (ok) cardPhrases.push(base + 'card' + i + '.mp3');
+    else break;
+  }
+  for (let i = 1; i <= 20; i++) {
+    const ok = await tryLoad(base + 'position' + i + '.mp3');
+    if (ok) posPhrases.push(base + 'position' + i + '.mp3');
+    else break;
+  }
+}
+
+function randPhrase(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function playChain(urls, onDone) {
+  const filtered = urls.filter(Boolean);
+  if (!filtered.length) { if (onDone) onDone(); return; }
+  let i = 0;
+  function next() {
+    if (!running) return;
+    if (i >= filtered.length) { if (onDone) onDone(); return; }
+    const a = new Audio(filtered[i++]);
+    currentAudio = a;
+    a.onended = next;
+    a.onerror = next;
+    a.play().catch(next);
+  }
+  next();
+}
+
+function stopCurrentAudio() {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.src = '';
+    currentAudio = null;
+  }
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function getRange() {
+  let f = parseInt(document.getElementById('range-from').value) || 1;
+  let t = parseInt(document.getElementById('range-to').value) || 52;
+  f = Math.max(1, Math.min(52, f));
+  t = Math.max(f, Math.min(52, t));
+  return STACK.filter(c => c.pos >= f && c.pos <= t);
+}
+
+function buildDeck(cards) {
+  if (mode === 'mixed') {
+    const ptc = cards.map(c => ({...c, qtype: 'pos-to-card'}));
+    const ctp = cards.map(c => ({...c, qtype: 'card-to-pos'}));
+    return shuffle([...ptc, ...ctp]);
+  }
+  return shuffle(cards.map(c => ({...c, qtype: mode})));
+}
+
+function applyRange() {
+  if (running) stopPlay();
+  deck = buildDeck(getRange());
+  idx = 0; round = 1;
+  updateProgress();
+  resetCardFaces();
+}
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-ptc').classList.toggle('active', m === 'pos-to-card');
+  document.getElementById('btn-ctp').classList.toggle('active', m === 'card-to-pos');
+  document.getElementById('btn-mix').classList.toggle('active', m === 'mixed');
+  if (running) stopPlay();
+  deck = buildDeck(getRange());
+  idx = 0; round = 1;
+  updateProgress();
+  resetCardFaces();
+}
+
+function resetCardFaces() {
+  document.getElementById('card-scene').classList.remove('flipped');
+  document.getElementById('front-face').innerHTML = '<div class="position-number" style="color:#ccc">—</div><div class="card-sublabel">Press start to begin</div>';
+  document.getElementById('back-face').innerHTML = '<div class="card-sublabel" style="color:#ccc">Answer will appear here</div>';
+}
+
+function updateProgress() {
+  const total = deck.length;
+  const curr = running ? Math.min(idx + 1, total) : 0;
+  document.getElementById('progress').innerHTML = running
+    ? `Card <strong>${curr}</strong> of <strong>${total}</strong>`
+    : `<strong>${total}</strong> cards ready`;
+  document.getElementById('round-badge').textContent = `Round ${round}`;
+}
+
+function renderFront(card) {
+  const f = document.getElementById('front-face');
+  if (card.qtype === 'pos-to-card') {
+    f.innerHTML = `<div class="phase-label">Position</div><div class="position-number">${card.pos}</div>`;
+  } else {
+    const col = RED.includes(card.s) ? 'red' : '';
+    f.innerHTML = `<div class="phase-label">What position?</div><div class="suit-symbol ${col}">${SUITS[card.s]}</div><div class="card-label ${col}">${VNAMES[card.v]} of ${SNAMES[card.s]}</div>`;
+  }
+}
+
+function renderBack(card) {
+  const b = document.getElementById('back-face');
+  if (card.qtype === 'pos-to-card') {
+    const col = RED.includes(card.s) ? 'red' : '';
+    b.innerHTML = `<div class="phase-label">Answer</div><div class="suit-symbol ${col}">${SUITS[card.s]}</div><div class="card-label ${col}">${VNAMES[card.v]} of ${SNAMES[card.s]}</div>`;
+  } else {
+    b.innerHTML = `<div class="phase-label">Answer</div><div class="position-number">${card.pos}</div><div class="card-sublabel">Position ${card.pos}</div>`;
+  }
+}
+
+function animateBar(ms) {
+  const bar = document.getElementById('timer-bar');
+  bar.style.transition = 'none';
+  bar.style.width = '100%';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    bar.style.transition = `width ${ms}ms linear`;
+    bar.style.width = '0%';
+  }));
+}
+
+function stopBar() {
+  const bar = document.getElementById('timer-bar');
+  bar.style.transition = 'none';
+  bar.style.width = '100%';
+}
+
+function playQuestion(card, onDone) {
+  const base = baseUrl();
+  if (card.qtype === 'pos-to-card') {
+    const phrase = randPhrase(cardPhrases.length ? cardPhrases : [null]);
+    playChain([phrase, base + 'pos_' + card.pos + '.mp3'], onDone);
+  } else {
+    const phrase = randPhrase(posPhrases.length ? posPhrases : [null]);
+    playChain([phrase, base + 'card_' + card.v + card.s + '.mp3'], onDone);
+  }
+}
+
+function playAnswer(card, onDone) {
+  const base = baseUrl();
+  if (card.qtype === 'pos-to-card') {
+    playChain([base + 'card_' + card.v + card.s + '.mp3'], onDone);
+  } else {
+    playChain([base + 'pos_' + card.pos + '.mp3'], onDone);
+  }
+}
+
+function showCard() {
+  if (!running) return;
+  const card = deck[idx];
+  const delay = parseInt(document.getElementById('delay-sel').value) || 3000;
+  document.getElementById('card-scene').classList.remove('flipped');
+  renderFront(card);
+  renderBack(card);
+  updateProgress();
+
+  playQuestion(card, () => {
+    if (!running) return;
+    animateBar(delay);
+    phaseTimer = setTimeout(() => {
+      if (!running) return;
+      document.getElementById('card-scene').classList.add('flipped');
+      playAnswer(card, () => {
+        if (!running) return;
+        animateBar(delay);
+        phaseTimer = setTimeout(() => {
+          if (!running) return;
+          idx++;
+          if (idx >= deck.length) {
+            round++;
+            deck = buildDeck(getRange());
+            idx = 0;
+          }
+          showCard();
+        }, delay);
+      });
+    }, delay);
+  });
+}
+
+function togglePlay() {
+  if (running) stopPlay(); else startPlay();
+}
+
+function startPlay() {
+  running = true;
+  deck = buildDeck(getRange());
+  idx = 0; round = 1;
+  document.getElementById('play-btn').classList.add('running');
+  document.getElementById('play-icon').innerHTML = '<rect x="3" y="2" width="4" height="12" rx="1" fill="currentColor"/><rect x="9" y="2" width="4" height="12" rx="1" fill="currentColor"/>';
+  document.getElementById('play-label').textContent = 'Stop';
+  document.getElementById('session-dot').classList.add('active');
+  sessionStart = Date.now();
+  sessionSeconds = 0;
+  sessionTimer = setInterval(tickSession, 1000);
+  showCard();
+}
+
+function stopPlay() {
+  running = false;
+  clearTimeout(phaseTimer);
+  stopCurrentAudio();
+  stopBar();
+  document.getElementById('play-btn').classList.remove('running');
+  document.getElementById('play-icon').innerHTML = '<polygon points="4,2 14,8 4,14" fill="currentColor"/>';
+  document.getElementById('play-label').textContent = 'Start';
+  document.getElementById('session-dot').classList.remove('active');
+  clearInterval(sessionTimer);
+  if (sessionStart) {
+    const secs = Math.floor((Date.now() - sessionStart) / 1000);
+    if (secs > 5) saveSession(secs);
+  }
+  sessionStart = null;
+  sessionSeconds = 0;
+  document.getElementById('session-time').textContent = '0:00';
+  resetCardFaces();
+  idx = 0; round = 1;
+  updateProgress();
+}
+
+function tickSession() {
+  sessionSeconds++;
+  document.getElementById('session-time').textContent = formatTime(sessionSeconds);
+}
+
+function formatTime(secs) {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+function todayKey() {
+  const d = new Date();
+  return 'log_' + d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function saveSession(secs) {
+  const key = todayKey();
+  let existing = {total: 0, sessions: 0};
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) existing = JSON.parse(raw);
+  } catch(e) {}
+  existing.total += secs;
+  existing.sessions += 1;
+  localStorage.setItem(key, JSON.stringify(existing));
+  renderLog();
+}
+
+function renderLog() {
+  let allTime = 0;
+  let todayTotal = 0;
+  const today = todayKey();
+  const entries = [];
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (!k.startsWith('log_')) continue;
+    try {
+      const d = JSON.parse(localStorage.getItem(k));
+      entries.push({key: k, date: k.replace('log_', ''), ...d});
+      allTime += d.total;
+      if (k === today) todayTotal = d.total;
+    } catch(e) {}
+  }
+
+  entries.sort((a, b) => b.date.localeCompare(a.date));
+  document.getElementById('today-time').textContent = formatTime(todayTotal);
+  document.getElementById('alltime-time').textContent = formatTime(allTime);
+
+  const grid = document.getElementById('log-grid');
+  if (!entries.length) {
+    grid.innerHTML = '<div class="no-log">No sessions yet — start drilling!</div>';
+    return;
+  }
+  grid.innerHTML = entries.slice(0, 14).map(e => {
+    const d = new Date(e.date + 'T00:00:00');
+    const label = d.toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'});
+    return `<div class="log-card">
+      <div class="log-date">${label}</div>
+      <div class="log-time">${formatTime(e.total)}</div>
+      <div class="log-sessions">${e.sessions} session${e.sessions !== 1 ? 's' : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+function clearLog() {
+  if (!confirm('Clear all practice history?')) return;
+  const toRemove = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('log_')) toRemove.push(k);
+  }
+  toRemove.forEach(k => localStorage.removeItem(k));
+  renderLog();
+}
+
+deck = buildDeck(getRange());
+updateProgress();
+reloadPhrases();
+renderLog();
+</script>
+</body>
+</html>
