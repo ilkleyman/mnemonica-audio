@@ -645,6 +645,18 @@ async function saveBin(data) {
 }
 
 /* ── Audio ── */
+const audioCache = {};
+
+function preloadAudio(url) {
+  if (audioCache[url]) return audioCache[url];
+  const a = new Audio();
+  a.preload = 'auto';
+  a.src = url;
+  a.load();
+  audioCache[url] = a;
+  return a;
+}
+
 function tryLoad(url) {
   return new Promise(resolve => {
     const a = new Audio();
@@ -657,14 +669,22 @@ function tryLoad(url) {
 async function reloadPhrases() {
   cardPhrases = []; posPhrases = []; linkPhrases = [];
   for (let i = 1; i <= 20; i++) {
-    if (await tryLoad(AUDIO_BASE+'card'+i+'.mp3')) cardPhrases.push(AUDIO_BASE+'card'+i+'.mp3'); else break;
+    const url = AUDIO_BASE+'card'+i+'.mp3';
+    if (await tryLoad(url)) { cardPhrases.push(url); preloadAudio(url); } else break;
   }
   for (let i = 1; i <= 20; i++) {
-    if (await tryLoad(AUDIO_BASE+'position'+i+'.mp3')) posPhrases.push(AUDIO_BASE+'position'+i+'.mp3'); else break;
+    const url = AUDIO_BASE+'position'+i+'.mp3';
+    if (await tryLoad(url)) { posPhrases.push(url); preloadAudio(url); } else break;
   }
   for (let i = 1; i <= 20; i++) {
-    if (await tryLoad(AUDIO_BASE+'link'+i+'.mp3')) linkPhrases.push(AUDIO_BASE+'link'+i+'.mp3'); else break;
+    const url = AUDIO_BASE+'link'+i+'.mp3';
+    if (await tryLoad(url)) { linkPhrases.push(url); preloadAudio(url); } else break;
   }
+  // Preload all 52 card name files and position number files
+  const VCODES = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+  const SCODES = ['C','H','D','S'];
+  VCODES.forEach(v => SCODES.forEach(s => preloadAudio(AUDIO_BASE+'card_'+v+s+'.mp3')));
+  for (let i = 1; i <= 52; i++) preloadAudio(AUDIO_BASE+'pos_'+i+'.mp3');
 }
 
 function rand(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
@@ -676,7 +696,15 @@ function playChain(urls, onDone) {
   function next() {
     if (!running) return;
     if (i >= list.length) { if (onDone) onDone(); return; }
-    const a = new Audio(list[i++]);
+    const url = list[i++];
+    // Clone the cached audio so it can be replayed immediately
+    let a;
+    if (audioCache[url]) {
+      a = new Audio(url);
+      a.preload = 'auto';
+    } else {
+      a = new Audio(url);
+    }
     currentAudio = a;
     a.onended = next; a.onerror = next;
     a.play().catch(next);
