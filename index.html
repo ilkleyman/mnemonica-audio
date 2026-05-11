@@ -589,6 +589,8 @@ body {
       <button class="mode-btn active" id="btn-ptc" onclick="setMode('pos-to-card')">Pos → Card</button>
       <button class="mode-btn" id="btn-ctp" onclick="setMode('card-to-pos')">Card → Pos</button>
       <button class="mode-btn" id="btn-mix" onclick="setMode('mixed')">Mixed</button>
+      <button class="mode-btn" id="btn-bef" onclick="setMode('card-before')">Card Before</button>
+      <button class="mode-btn" id="btn-aft" onclick="setMode('card-after')">Card After</button>
     </div>
     <div class="range-group">
       <span>Cards</span>
@@ -600,12 +602,14 @@ body {
     <div class="wicked-row">
       <div class="delay-group">
         <span>Delay</span>
-        <select id="delay-sel">
+        <select id="delay-sel" onchange="saveSettings()">
           <option value="1500">1.5s</option>
           <option value="2000">2s</option>
           <option value="3000">3s</option>
           <option value="4000">4s</option>
           <option value="5000" selected>5s</option>
+          <option value="7000">7s</option>
+          <option value="10000">10s</option>
         </select>
       </div>
       <div class="wicked-divider"></div>
@@ -748,7 +752,7 @@ function suitSymbol(s, color, sizePx) {
 let mode = 'pos-to-card', deck = [], idx = 0, round = 1;
 let running = false, sessionId = 0;
 let t1 = null, t2 = null, t3 = null, t4 = null;  // all timers
-let cardPhrases = [], posPhrases = [], linkPhrases = [], introPhrases = [];
+let cardPhrases = [], posPhrases = [], linkPhrases = [], introPhrases = [], beforePhrases = [], afterPhrases = [];
 let wickedTimer = null, wickedDelay = 5000;
 let sessionStart = null, sessionTimer = null, sessionSeconds = 0;
 let currentAudio = null;
@@ -817,7 +821,7 @@ function tryLoad(url) {
 }
 
 async function reloadPhrases() {
-  cardPhrases = []; posPhrases = []; linkPhrases = []; introPhrases = [];
+  cardPhrases = []; posPhrases = []; linkPhrases = []; introPhrases = []; beforePhrases = []; afterPhrases = [];
   for (let i = 1; i <= 20; i++) {
     const url = AUDIO_BASE + 'card' + i + '.mp3';
     if (await tryLoad(url)) { cardPhrases.push(url); preloadAudio(url); } else break;
@@ -833,6 +837,14 @@ async function reloadPhrases() {
   for (let i = 1; i <= 20; i++) {
     const url = AUDIO_BASE + 'intro' + i + '.mp3';
     if (await tryLoad(url)) { introPhrases.push(url); preloadAudio(url); } else break;
+  }
+  for (let i = 1; i <= 20; i++) {
+    const url = AUDIO_BASE + 'beforecard' + i + '.mp3';
+    if (await tryLoad(url)) { beforePhrases.push(url); preloadAudio(url); } else break;
+  }
+  for (let i = 1; i <= 20; i++) {
+    const url = AUDIO_BASE + 'aftercard' + i + '.mp3';
+    if (await tryLoad(url)) { afterPhrases.push(url); preloadAudio(url); } else break;
   }
   const VCODES = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
   const SCODES = ['C','H','D','S'];
@@ -891,6 +903,13 @@ function buildDeck(cards) {
     ...cards.map(c => ({...c, qtype:'pos-to-card'})),
     ...cards.map(c => ({...c, qtype:'card-to-pos'}))
   ]);
+  // card-before and card-after need adjacent cards — attach them at build time
+  if (mode === 'card-before' || mode === 'card-after') {
+    return shuffle(cards
+      .filter(c => mode === 'card-before' ? c.pos > 1 : c.pos < 52)
+      .map(c => ({...c, qtype: mode}))
+    );
+  }
   return shuffle(cards.map(c => ({...c, qtype: mode})));
 }
 
@@ -898,12 +917,14 @@ function applyRange() {
   if (running) stopPlay();
   deck = buildDeck(getRange()); idx = 0; round = 1;
   updateProgress(); resetFaces();
+  saveSettings();
 }
 
 function setMode(m) {
   mode = m;
-  ['ptc','ctp','mix'].forEach(id => document.getElementById('btn-' + id).classList.remove('active'));
-  document.getElementById('btn-' + (m === 'pos-to-card' ? 'ptc' : m === 'card-to-pos' ? 'ctp' : 'mix')).classList.add('active');
+  ['ptc','ctp','mix','bef','aft'].forEach(id => document.getElementById('btn-' + id).classList.remove('active'));
+  const btnMap = {'pos-to-card':'ptc','card-to-pos':'ctp','mixed':'mix','card-before':'bef','card-after':'aft'};
+  document.getElementById('btn-' + btnMap[m]).classList.add('active');
   if (running) stopPlay();
   deck = buildDeck(getRange()); idx = 0; round = 1;
   updateProgress(); resetFaces();
@@ -942,6 +963,23 @@ function renderFront(card) {
         <div class="phase-label gold-dim">Position</div>
         <div class="position-number gold-bright">${card.pos}</div>
       </div>`;
+  } else if (card.qtype === 'card-before' || card.qtype === 'card-after') {
+    f.className = 'card-face card-front card-cream';
+    const suit_lg = suitSymbol(card.s, color, 72);
+    const suit_sm = suitSymbol(card.s, color, 15);
+    const lbl = card.qtype === 'card-before' ? 'What card comes before?' : 'What card comes after?';
+    f.innerHTML = `
+      <div class="corner-tl">
+        <div class="corner-val" style="color:${color}">${card.v}</div>
+        <div>${suit_sm}</div>
+      </div>
+      <div class="corner-br">
+        <div class="corner-val" style="color:${color}">${card.v}</div>
+        <div>${suit_sm}</div>
+      </div>
+      <div class="phase-label">${lbl}</div>
+      ${suit_lg}
+      <div class="card-label" style="color:${color}">${VNAMES[card.v]} of ${SNAMES[card.s]}</div>`;
   } else {
     f.className = 'card-face card-front card-cream';
     const suit_lg = suitSymbol(card.s, color, 72);
@@ -963,22 +1001,26 @@ function renderFront(card) {
 
 function renderBack(card) {
   const b = document.getElementById('back-face');
-  const color = cardColor(card.s);
-  if (card.qtype === 'pos-to-card') {
+  // For card-before: answer is the card at pos-1; for card-after: pos+1
+  let ansCard = card;
+  if (card.qtype === 'card-before') ansCard = STACK.find(c => c.pos === card.pos - 1) || card;
+  if (card.qtype === 'card-after')  ansCard = STACK.find(c => c.pos === card.pos + 1) || card;
+  const color = cardColor(ansCard.s);
+  if (card.qtype === 'pos-to-card' || card.qtype === 'card-before' || card.qtype === 'card-after') {
     b.className = 'card-face card-back';
-    const suit_lg = suitSymbol(card.s, color, 72);
-    const suit_sm = suitSymbol(card.s, color, 15);
+    const suit_lg = suitSymbol(ansCard.s, color, 72);
+    const suit_sm = suitSymbol(ansCard.s, color, 15);
     b.innerHTML = `
       <div class="corner-tl">
-        <div class="corner-val" style="color:${color}">${card.v}</div>
+        <div class="corner-val" style="color:${color}">${ansCard.v}</div>
         <div>${suit_sm}</div>
       </div>
       <div class="corner-br">
-        <div class="corner-val" style="color:${color}">${card.v}</div>
+        <div class="corner-val" style="color:${color}">${ansCard.v}</div>
         <div>${suit_sm}</div>
       </div>
       ${suit_lg}
-      <div class="card-label" style="color:${color}">${VNAMES[card.v]} of ${SNAMES[card.s]}</div>`;
+      <div class="card-label" style="color:${color}">${VNAMES[ansCard.v]} of ${SNAMES[ansCard.s]}</div>`;
   } else {
     b.className = 'card-face card-back card-back-blue';
     b.innerHTML = `
@@ -1013,16 +1055,32 @@ function playQuestion(card, onDone) {
   const prefix = isFirst
     ? (introPhrases.length ? rand(introPhrases) : null)
     : (linkPhrases.length ? rand(linkPhrases) : null);
+  const cardFile = AUDIO_BASE + 'card_' + card.v + card.s + '.mp3';
   if (card.qtype === 'pos-to-card') {
     playChain([prefix, rand(cardPhrases.length ? cardPhrases : [null]), AUDIO_BASE + 'pos_' + card.pos + '.mp3'], onDone);
+  } else if (card.qtype === 'card-before') {
+    playChain([prefix, rand(beforePhrases.length ? beforePhrases : [null]), cardFile], onDone);
+  } else if (card.qtype === 'card-after') {
+    playChain([prefix, rand(afterPhrases.length ? afterPhrases : [null]), cardFile], onDone);
   } else {
-    playChain([prefix, rand(posPhrases.length ? posPhrases : [null]), AUDIO_BASE + 'card_' + card.v + card.s + '.mp3'], onDone);
+    playChain([prefix, rand(posPhrases.length ? posPhrases : [null]), cardFile], onDone);
   }
 }
 
 function playAnswer(card, onDone) {
-  if (card.qtype === 'pos-to-card') playChain([AUDIO_BASE + 'card_' + card.v + card.s + '.mp3'], onDone);
-  else playChain([AUDIO_BASE + 'pos_' + card.pos + '.mp3'], onDone);
+  if (card.qtype === 'pos-to-card') {
+    playChain([AUDIO_BASE + 'card_' + card.v + card.s + '.mp3'], onDone);
+  } else if (card.qtype === 'card-before') {
+    const ans = STACK.find(c => c.pos === card.pos - 1);
+    if (ans) playChain([AUDIO_BASE + 'card_' + ans.v + ans.s + '.mp3'], onDone);
+    else if (onDone) onDone();
+  } else if (card.qtype === 'card-after') {
+    const ans = STACK.find(c => c.pos === card.pos + 1);
+    if (ans) playChain([AUDIO_BASE + 'card_' + ans.v + ans.s + '.mp3'], onDone);
+    else if (onDone) onDone();
+  } else {
+    playChain([AUDIO_BASE + 'pos_' + card.pos + '.mp3'], onDone);
+  }
 }
 
 /* ── Wicked Mode ── */
@@ -1031,6 +1089,7 @@ function isWicked() { return document.getElementById('wicked-mode').checked; }
 function updateWickedLabel() {
   document.getElementById('wicked-label').classList.toggle('active', isWicked());
   if (!isWicked()) document.getElementById('wicked-indicator').textContent = '';
+  saveSettings();
 }
 
 function startWicked() {
@@ -1203,7 +1262,35 @@ async function clearLog() {
   try { await saveBin({}); renderLog({}); } catch(e) { syncStatus('clear failed'); }
 }
 
+/* ── Settings persistence ── */
+function saveSettings() {
+  const s = {
+    mode,
+    from: document.getElementById('range-from').value,
+    to: document.getElementById('range-to').value,
+    delay: document.getElementById('delay-sel').value,
+    wicked: document.getElementById('wicked-mode').checked
+  };
+  localStorage.setItem('mnemonica_settings', JSON.stringify(s));
+}
+
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem('mnemonica_settings'));
+    if (!s) return;
+    if (s.from) document.getElementById('range-from').value = s.from;
+    if (s.to) document.getElementById('range-to').value = s.to;
+    if (s.delay) document.getElementById('delay-sel').value = s.delay;
+    if (s.wicked) {
+      document.getElementById('wicked-mode').checked = s.wicked;
+      updateWickedLabel();
+    }
+    if (s.mode) setMode(s.mode);
+  } catch(e) {}
+}
+
 /* ── Init ── */
+loadSettings();
 deck = buildDeck(getRange());
 updateProgress();
 reloadPhrases();
