@@ -83,11 +83,26 @@ body {
 /* ── Controls ── */
 .controls {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: center;
   gap: 10px;
+  margin-bottom: 1.25rem;
+}
+
+.mode-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-row {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  margin-bottom: 1.25rem;
+  gap: 10px;
+  margin-top: 2px;
 }
 
 .mode-toggle {
@@ -249,7 +264,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1rem;
+  margin-top: 0.75rem;
+  margin-bottom: 1.5rem;
   padding: 0 4px;
 }
 
@@ -439,7 +455,7 @@ body {
 .play-row {
   display: flex;
   justify-content: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 .big-btn {
@@ -585,47 +601,55 @@ body {
   </div>
 
   <div class="controls">
-    <div class="mode-toggle">
-      <button class="mode-btn active" id="btn-ptc" onclick="setMode('pos-to-card')">Pos → Card</button>
-      <button class="mode-btn" id="btn-ctp" onclick="setMode('card-to-pos')">Card → Pos</button>
-      <button class="mode-btn" id="btn-mix" onclick="setMode('mixed')">Mixed</button>
-      <button class="mode-btn" id="btn-bef" onclick="setMode('card-before')">Card Before</button>
-      <button class="mode-btn" id="btn-aft" onclick="setMode('card-after')">Card After</button>
-    </div>
-    <div class="range-group">
-      <span>Cards</span>
-      <input type="number" id="range-from" value="1" min="1" max="52" />
-      <span>to</span>
-      <input type="number" id="range-to" value="52" min="1" max="52" />
-      <button class="action-btn" onclick="applyRange()">Apply</button>
-    </div>
-    <div class="wicked-row">
-      <div class="delay-group">
-        <span>Delay</span>
-        <select id="delay-sel" onchange="saveSettings()">
-          <option value="1500">1.5s</option>
-          <option value="2000">2s</option>
-          <option value="3000">3s</option>
-          <option value="4000">4s</option>
-          <option value="5000" selected>5s</option>
-          <option value="7000">7s</option>
-          <option value="10000">10s</option>
-        </select>
+    <div class="mode-group">
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="btn-ptc" onclick="setMode('pos-to-card')">Pos → Card</button>
+        <button class="mode-btn" id="btn-ctp" onclick="setMode('card-to-pos')">Card → Pos</button>
+        <button class="mode-btn" id="btn-mix" onclick="setMode('mixed')">Mixed</button>
       </div>
-      <div class="wicked-divider"></div>
-      <label class="wicked-label" id="wicked-label">
-        <input type="checkbox" id="wicked-mode" onchange="updateWickedLabel()" />
-        <div class="wicked-check"><span class="wicked-checkmark">✓</span></div>
-        <span class="wicked-text">Wicked Mode</span>
-      </label>
+      <div class="mode-toggle">
+        <button class="mode-btn" id="btn-bef" onclick="setMode('card-before')">Card Before</button>
+        <button class="mode-btn" id="btn-aft" onclick="setMode('card-after')">Card After</button>
+      </div>
+      <div class="settings-row">
+        <div class="range-group">
+          <span>Cards</span>
+          <input type="number" id="range-from" value="1" min="1" max="52" onchange="saveSettings()" />
+          <span>to</span>
+          <input type="number" id="range-to" value="52" min="1" max="52" onchange="saveSettings()" />
+        </div>
+        <div class="wicked-divider"></div>
+        <div class="delay-group">
+          <span>Delay</span>
+          <select id="delay-sel" onchange="saveSettings()">
+            <option value="1500">1.5s</option>
+            <option value="2000">2s</option>
+            <option value="3000">3s</option>
+            <option value="4000">4s</option>
+            <option value="5000" selected>5s</option>
+            <option value="7000">7s</option>
+            <option value="10000">10s</option>
+          </select>
+        </div>
+        <div class="wicked-divider"></div>
+        <label class="wicked-label" id="wicked-label">
+          <input type="checkbox" id="wicked-mode" onchange="updateWickedLabel()" />
+          <div class="wicked-check"><span class="wicked-checkmark">✓</span></div>
+          <span class="wicked-text">Wicked Mode</span>
+        </label>
+      </div>
     </div>
   </div>
 
   <div class="wicked-indicator" id="wicked-indicator"></div>
 
-  <div class="progress-row">
-    <div class="progress" id="progress">Ready</div>
-    <div class="round-badge" id="round-badge">Round 1</div>
+  <div class="play-row">
+    <button class="big-btn" id="play-btn" onclick="togglePlay()">
+      <svg id="play-icon" width="16" height="16" viewBox="0 0 16 16">
+        <polygon points="4,2 14,8 4,14" fill="currentColor"/>
+      </svg>
+      <span id="play-label">Start</span>
+    </button>
   </div>
 
   <div class="card-scene" id="card-scene">
@@ -645,13 +669,9 @@ body {
 
   <div class="timer-wrap"><div class="timer-bar" id="timer-bar"></div></div>
 
-  <div class="play-row">
-    <button class="big-btn" id="play-btn" onclick="togglePlay()">
-      <svg id="play-icon" width="16" height="16" viewBox="0 0 16 16">
-        <polygon points="4,2 14,8 4,14" fill="currentColor"/>
-      </svg>
-      <span id="play-label">Start</span>
-    </button>
+  <div class="progress-row">
+    <div class="progress" id="progress">Ready</div>
+    <div class="round-badge" id="round-badge">Round 1</div>
   </div>
 
   <div class="log-section">
