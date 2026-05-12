@@ -154,13 +154,6 @@ body {
 
 .range-group input[type=number]:focus { outline: none; border-color: var(--gold); }
 
-.wicked-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: nowrap;
-}
-
 .delay-group {
   display: flex;
   align-items: center;
@@ -186,62 +179,6 @@ body {
   height: 22px;
   background: var(--gold-dark);
   opacity: 0.4;
-}
-
-.wicked-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  font-family: 'Cinzel', serif;
-  font-size: 12px;
-  color: var(--cream-dim);
-  transition: color 0.2s;
-  user-select: none;
-  letter-spacing: 0.05em;
-}
-
-.wicked-label:hover { color: var(--cream); }
-.wicked-label input[type=checkbox] { display: none; }
-
-.wicked-check {
-  width: 18px;
-  height: 18px;
-  border: 1px solid var(--gold-dark);
-  border-radius: 4px;
-  background: rgba(0,0,0,0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-
-.wicked-label.active .wicked-check {
-  border-color: #2ecc71;
-  background: rgba(46,204,113,0.15);
-  box-shadow: 0 0 8px rgba(46,204,113,0.3);
-}
-
-.wicked-checkmark {
-  color: #2ecc71;
-  font-size: 13px;
-  line-height: 1;
-  display: none;
-}
-
-.wicked-label.active .wicked-checkmark { display: block; }
-.wicked-label.active .wicked-text { color: var(--cream); }
-
-.wicked-indicator {
-  font-size: 11px;
-  color: var(--gold-dark);
-  font-family: 'Cinzel', serif;
-  text-align: center;
-  margin-top: -8px;
-  margin-bottom: 4px;
-  min-height: 16px;
-  letter-spacing: 0.05em;
 }
 
 .action-btn {
@@ -603,13 +540,10 @@ body {
   <div class="controls">
     <div class="mode-group">
       <div class="mode-toggle">
-        <button class="mode-btn active" id="btn-ptc" onclick="setMode('pos-to-card')">Pos → Card</button>
-        <button class="mode-btn" id="btn-ctp" onclick="setMode('card-to-pos')">Card → Pos</button>
-        <button class="mode-btn" id="btn-mix" onclick="setMode('mixed')">Mixed</button>
-      </div>
-      <div class="mode-toggle">
-        <button class="mode-btn" id="btn-bef" onclick="setMode('card-before')">Card Before</button>
-        <button class="mode-btn" id="btn-aft" onclick="setMode('card-after')">Card After</button>
+        <button class="mode-btn active" id="btn-ptc" onclick="toggleMode('pos-to-card')">Pos → Card</button>
+        <button class="mode-btn" id="btn-ctp" onclick="toggleMode('card-to-pos')">Card → Pos</button>
+        <button class="mode-btn" id="btn-bef" onclick="toggleMode('card-before')">Card Before</button>
+        <button class="mode-btn" id="btn-aft" onclick="toggleMode('card-after')">Card After</button>
       </div>
       <div class="settings-row">
         <div class="range-group">
@@ -621,7 +555,8 @@ body {
         <div class="wicked-divider"></div>
         <div class="delay-group">
           <span>Delay</span>
-          <select id="delay-sel" onchange="saveSettings()">
+          <select id="delay-sel" onchange="onDelayChange()">
+            <option value="1000">1s</option>
             <option value="1500">1.5s</option>
             <option value="2000">2s</option>
             <option value="3000">3s</option>
@@ -629,19 +564,12 @@ body {
             <option value="5000" selected>5s</option>
             <option value="7000">7s</option>
             <option value="10000">10s</option>
+            <option value="wicked">Wicked Mode</option>
           </select>
         </div>
-        <div class="wicked-divider"></div>
-        <label class="wicked-label" id="wicked-label">
-          <input type="checkbox" id="wicked-mode" onchange="updateWickedLabel()" />
-          <div class="wicked-check"><span class="wicked-checkmark">✓</span></div>
-          <span class="wicked-text">Wicked Mode</span>
-        </label>
       </div>
     </div>
   </div>
-
-  <div class="wicked-indicator" id="wicked-indicator"></div>
 
   <div class="play-row">
     <button class="big-btn" id="play-btn" onclick="togglePlay()">
@@ -769,7 +697,7 @@ function suitSymbol(s, color, sizePx) {
 }
 
 /* ── State ── */
-let mode = 'pos-to-card', deck = [], idx = 0, round = 1;
+let activeModes = new Set(['pos-to-card']), deck = [], idx = 0, round = 1;
 let running = false, sessionId = 0;
 let t1 = null, t2 = null, t3 = null, t4 = null;  // all timers
 let cardPhrases = [], posPhrases = [], linkPhrases = [], introPhrases = [], beforePhrases = [], afterPhrases = [];
@@ -919,18 +847,16 @@ function getRange() {
 }
 
 function buildDeck(cards) {
-  if (mode === 'mixed') return shuffle([
-    ...cards.map(c => ({...c, qtype:'pos-to-card'})),
-    ...cards.map(c => ({...c, qtype:'card-to-pos'}))
-  ]);
-  // card-before and card-after need adjacent cards — attach them at build time
-  if (mode === 'card-before' || mode === 'card-after') {
-    return shuffle(cards
-      .filter(c => mode === 'card-before' ? c.pos > 1 : c.pos < 52)
-      .map(c => ({...c, qtype: mode}))
-    );
-  }
-  return shuffle(cards.map(c => ({...c, qtype: mode})));
+  const modes = [...activeModes];
+  if (modes.length === 0) return shuffle(cards.map(c => ({...c, qtype:'pos-to-card'})));
+  let all = [];
+  modes.forEach(m => {
+    let filtered = cards;
+    if (m === 'card-before') filtered = cards.filter(c => c.pos > 1);
+    if (m === 'card-after')  filtered = cards.filter(c => c.pos < 52);
+    all = all.concat(filtered.map(c => ({...c, qtype: m})));
+  });
+  return shuffle(all);
 }
 
 function applyRange() {
@@ -940,14 +866,20 @@ function applyRange() {
   saveSettings();
 }
 
-function setMode(m) {
-  mode = m;
-  ['ptc','ctp','mix','bef','aft'].forEach(id => document.getElementById('btn-' + id).classList.remove('active'));
-  const btnMap = {'pos-to-card':'ptc','card-to-pos':'ctp','mixed':'mix','card-before':'bef','card-after':'aft'};
-  document.getElementById('btn-' + btnMap[m]).classList.add('active');
+function toggleMode(m) {
+  const btnMap = {'pos-to-card':'ptc','card-to-pos':'ctp','card-before':'bef','card-after':'aft'};
+  if (activeModes.has(m)) {
+    if (activeModes.size === 1) return; // always keep at least one active
+    activeModes.delete(m);
+    document.getElementById('btn-' + btnMap[m]).classList.remove('active');
+  } else {
+    activeModes.add(m);
+    document.getElementById('btn-' + btnMap[m]).classList.add('active');
+  }
   if (running) stopPlay();
   deck = buildDeck(getRange()); idx = 0; round = 1;
   updateProgress(); resetFaces();
+  saveSettings();
 }
 
 /* ── Card rendering ── */
@@ -1104,37 +1036,27 @@ function playAnswer(card, onDone) {
 }
 
 /* ── Wicked Mode ── */
-function isWicked() { return document.getElementById('wicked-mode').checked; }
+function isWicked() { return document.getElementById('delay-sel').value === 'wicked'; }
 
-function updateWickedLabel() {
-  document.getElementById('wicked-label').classList.toggle('active', isWicked());
-  if (!isWicked()) document.getElementById('wicked-indicator').textContent = '';
+function onDelayChange() {
   saveSettings();
 }
 
 function startWicked() {
-  wickedDelay = parseInt(document.getElementById('delay-sel').value) || 5000;
+  wickedDelay = 7000;
   wickedTimer = setInterval(() => {
-    wickedDelay = Math.max(1500, wickedDelay - 500);
-    updateWickedIndicator();
+    wickedDelay = Math.max(1000, wickedDelay - 500);
   }, 60000);
-  updateWickedIndicator();
 }
 
 function stopWicked() {
   clearInterval(wickedTimer); wickedTimer = null;
-  document.getElementById('wicked-indicator').textContent = '';
-}
-
-function updateWickedIndicator() {
-  const secs = (wickedDelay / 1000).toFixed(1);
-  document.getElementById('wicked-indicator').textContent =
-    wickedDelay <= 1500 ? '✦ Maximum difficulty reached ✦' : `✦ Wicked Mode — current delay ${secs}s`;
 }
 
 function getCurrentDelay() {
   if (isWicked() && running) return wickedDelay;
-  return parseInt(document.getElementById('delay-sel').value) || 5000;
+  const val = parseInt(document.getElementById('delay-sel').value);
+  return isNaN(val) ? 5000 : val;
 }
 
 /* ── Playback ── */
@@ -1285,11 +1207,10 @@ async function clearLog() {
 /* ── Settings persistence ── */
 function saveSettings() {
   const s = {
-    mode,
+    modes: [...activeModes],
     from: document.getElementById('range-from').value,
     to: document.getElementById('range-to').value,
-    delay: document.getElementById('delay-sel').value,
-    wicked: document.getElementById('wicked-mode').checked
+    delay: document.getElementById('delay-sel').value
   };
   localStorage.setItem('mnemonica_settings', JSON.stringify(s));
 }
@@ -1301,11 +1222,14 @@ function loadSettings() {
     if (s.from) document.getElementById('range-from').value = s.from;
     if (s.to) document.getElementById('range-to').value = s.to;
     if (s.delay) document.getElementById('delay-sel').value = s.delay;
-    if (s.wicked) {
-      document.getElementById('wicked-mode').checked = s.wicked;
-      updateWickedLabel();
+    if (s.modes && Array.isArray(s.modes) && s.modes.length > 0) {
+      activeModes = new Set(s.modes);
+      const btnMap = {'pos-to-card':'ptc','card-to-pos':'ctp','card-before':'bef','card-after':'aft'};
+      ['ptc','ctp','bef','aft'].forEach(id => document.getElementById('btn-' + id).classList.remove('active'));
+      activeModes.forEach(m => {
+        if (btnMap[m]) document.getElementById('btn-' + btnMap[m]).classList.add('active');
+      });
     }
-    if (s.mode) setMode(s.mode);
   } catch(e) {}
 }
 
