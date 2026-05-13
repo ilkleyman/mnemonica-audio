@@ -647,7 +647,7 @@ canvas { display: block; width: 100% !important; }
     <div class="log-grid" id="log-grid"><div class="no-log">No sessions yet — start drilling!</div></div>
   </div>
 
-  <div class="version-footer">V10 · 13th May 2026</div>
+  <div class="version-footer">V11 · 13th May 2026</div>
 
 </div>
 
@@ -1296,12 +1296,15 @@ function onCardTap() {
   flash.classList.add('show');
   setTimeout(() => flash.classList.remove('show'), 1000);
 
+  // Make absolutely sure back-face has the correct answer content before flipping
+  const card = deck[idx];
+  renderBack(card);
+
   // Flip to answer
   playFlipSound();
   document.getElementById('card-scene').classList.add('flipped');
 
-  // Show buttons immediately when card flips — no waiting for audio
-  const card = deck[idx];
+  // Show buttons immediately
   showAnswerButtons(card, elapsed);
 
   // Play answer audio in parallel
@@ -1386,6 +1389,7 @@ function showCard() {
         animateBar(delay);
         t3 = setTimeout(() => {
           if (!running || sessionId !== mySession) return;
+          renderBack(card);
           playFlipSound();
           scene.classList.add('flipped');
           playAnswer(card, () => {
