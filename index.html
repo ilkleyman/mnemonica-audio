@@ -212,22 +212,40 @@ body {
 .card-scene.timed-mode { cursor: pointer; }
 .card-scene.timed-mode .card-inner:hover { filter: drop-shadow(0 20px 40px rgba(0,0,0,0.7)); }
 
-/* Reaction time flash */
-.reaction-flash {
+/* ── Timing strip above answer buttons ── */
+.card-timing-strip {
   position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  font-family: 'Cinzel', serif;
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--gold);
-  text-shadow: 0 0 20px rgba(201,168,76,0.8);
-  z-index: 10;
+  bottom: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 7px 10px;
+  z-index: 21;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s;
 }
-.reaction-flash.show { opacity: 1; }
+.timing-strip-time {
+  font-family: 'Cinzel', serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #27ae60;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.timing-strip-comment {
+  font-family: 'Crimson Text', serif;
+  font-size: 12px;
+  font-style: italic;
+  color: rgba(255,255,255,0.65);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 110px;
+}
 
 /* ── Timer bar ── */
 .timer-wrap { height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; margin-bottom: 1.25rem; overflow: hidden; }
@@ -617,7 +635,12 @@ canvas { display: block; width: 100% !important; }
       </div>
       <div class="card-face card-back" id="back-face"></div>
     </div>
-    <div class="reaction-flash" id="reaction-flash"></div>
+    <div class="reaction-flash" id="reaction-flash" style="display:none"></div>
+    <!-- Timing strip shown above answer buttons -->
+    <div class="card-timing-strip" id="timing-strip" style="display:none">
+      <span class="timing-strip-time" id="timing-strip-time"></span>
+      <span class="timing-strip-comment" id="timing-strip-comment"></span>
+    </div>
     <!-- Answer buttons overlaid on card, shown after flip in timed mode -->
     <div class="card-answer-btns" id="answer-btns" style="display:none">
       <button class="card-ans-btn card-ans-correct" onclick="event.stopPropagation();answerCorrect()">✓ Got it</button>
@@ -648,7 +671,7 @@ canvas { display: block; width: 100% !important; }
     <div class="log-grid" id="log-grid"><div class="no-log">No sessions yet — start drilling!</div></div>
   </div>
 
-  <div class="version-footer">V14 · 13th May 2026</div>
+  <div class="version-footer">V15 · 13th May 2026</div>
 
 </div>
 
@@ -1102,12 +1125,55 @@ function renderBackPattern() {
 function hideAnswerButtons() {
   const el = document.getElementById('answer-btns');
   if (el) el.style.display = 'none';
+  const strip = document.getElementById('timing-strip');
+  if (strip) strip.style.display = 'none';
+}
+
+function getTimingQuip(card, elapsed) {
+  const key = cardKey(card);
+  const sessionMs = sessionTimings.map(t => t.ms).filter(t => t < 9000);
+
+  // Fastest ever for this card
+  const prevBest = (cardTimings[key] || []).filter(t => t < 9000);
+  const cardBest = prevBest.length > 0 ? Math.min(...prevBest) : null;
+
+  // Fastest this session overall
+  const sessionBest = sessionMs.length > 0 ? Math.min(...sessionMs) : null;
+
+  // PB average
+  const pbAvg = parseFloat(localStorage.getItem('mnemonica_pb_avg') || '99999');
+
+  if (elapsed < 1000) return '⚡ Under 1s!';
+  if (cardBest !== null && elapsed < cardBest) return '🏅 Best for this card';
+  if (sessionBest !== null && elapsed <= sessionBest) return '🔥 Fastest this session';
+  if (elapsed <= appSettings.target) return '✓ On target';
+  if (elapsed > appSettings.threshold * 1.5) return '😅 Keep drilling';
+  if (elapsed > appSettings.threshold) return 'Just over threshold';
+  return '';
 }
 
 function showAnswerButtons(card, elapsed) {
   const el = document.getElementById('answer-btns');
   el.style.display = 'flex';
   el.dataset.pending = JSON.stringify({ card: { v: card.v, s: card.s, pos: card.pos, qtype: card.qtype }, elapsed });
+
+  // Show timing strip
+  const strip = document.getElementById('timing-strip');
+  const timeEl = document.getElementById('timing-strip-time');
+  const commentEl = document.getElementById('timing-strip-comment');
+  timeEl.textContent = (elapsed / 1000).toFixed(2) + 's';
+  commentEl.textContent = getTimingQuip(card, elapsed);
+
+  // Colour by speed vs target
+  if (elapsed <= appSettings.target) {
+    timeEl.style.color = '#27ae60';
+  } else if (elapsed <= appSettings.threshold) {
+    timeEl.style.color = '#f39c12';
+  } else {
+    timeEl.style.color = '#e74c3c';
+  }
+
+  strip.style.display = 'flex';
 }
 
 function updateProgress() {
@@ -1317,12 +1383,6 @@ function onCardTap() {
   waitingForTap = false;
   clearAllTimers();
   stopCurrentAudio();
-
-  // Show reaction time flash
-  const flash = document.getElementById('reaction-flash');
-  flash.textContent = (elapsed / 1000).toFixed(2) + 's';
-  flash.classList.add('show');
-  setTimeout(() => flash.classList.remove('show'), 1000);
 
   // Replace question content with answer directly on the front face — no flip
   const card = deck[idx];
