@@ -25,6 +25,9 @@
   --card-shadow: rgba(0,0,0,0.6);
   --red: #c0392b;
   --black: #1a1a2e;
+  --green: #2ecc71;
+  --amber: #f39c12;
+  --danger: #e74c3c;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -34,13 +37,7 @@ body {
   background: var(--felt-dark);
   background-image:
     radial-gradient(ellipse at 50% 0%, #2a6040 0%, transparent 70%),
-    repeating-linear-gradient(
-      45deg,
-      transparent,
-      transparent 10px,
-      rgba(0,0,0,0.03) 10px,
-      rgba(0,0,0,0.03) 20px
-    );
+    repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.03) 10px, rgba(0,0,0,0.03) 20px);
   min-height: 100vh;
   padding: 1.5rem 1rem 3rem;
   color: var(--cream);
@@ -49,483 +46,460 @@ body {
 .app { max-width: 560px; margin: 0 auto; }
 
 /* ── Header ── */
-.header {
-  text-align: center;
-  margin-bottom: 1.75rem;
-}
-
-.header-title {
-  font-family: 'Cinzel', serif;
-  font-size: 26px;
-  font-weight: 700;
-  color: var(--gold);
-  letter-spacing: 0.08em;
-  text-shadow: 0 0 30px rgba(201,168,76,0.4);
-  margin-bottom: 2px;
-}
-
-.header-subtitle {
-  font-size: 13px;
-  color: var(--cream-dim);
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  font-family: 'Cinzel', serif;
-  font-weight: 400;
-}
-
-.gold-rule {
-  width: 100%;
-  height: 1px;
-  background: linear-gradient(to right, transparent, var(--gold-dark), var(--gold), var(--gold-dark), transparent);
-  margin: 0.75rem 0;
-}
+.header { text-align: center; margin-bottom: 1.75rem; }
+.header-title { font-family: 'Cinzel', serif; font-size: 26px; font-weight: 700; color: var(--gold); letter-spacing: 0.08em; text-shadow: 0 0 30px rgba(201,168,76,0.4); margin-bottom: 2px; }
+.header-subtitle { font-size: 13px; color: var(--cream-dim); letter-spacing: 0.15em; text-transform: uppercase; font-family: 'Cinzel', serif; font-weight: 400; }
+.gold-rule { width: 100%; height: 1px; background: linear-gradient(to right, transparent, var(--gold-dark), var(--gold), var(--gold-dark), transparent); margin: 0.75rem 0; }
 
 /* ── Controls ── */
-.controls {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 1.25rem;
-}
-
-.mode-group {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
-.settings-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 2px;
-}
+.controls { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 1.25rem; }
+.mode-group { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; }
+.settings-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; margin-top: 2px; }
 
 .mode-toggle {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   background: rgba(0,0,0,0.3);
   border: 1px solid var(--gold-dark);
   border-radius: 6px;
   overflow: hidden;
+  width: 100%;
+  max-width: 380px;
 }
 
+.mode-row {
+  display: flex;
+  width: 100%;
+  border-bottom: 1px solid var(--gold-dark);
+}
+.mode-row:last-child { border-bottom: none; }
+
 .mode-btn {
-  padding: 7px 12px;
-  font-size: 12px;
+  flex: 1;
+  padding: 7px 8px;
+  font-size: 11px;
   font-family: 'Cinzel', serif;
   font-weight: 400;
   background: none;
   border: none;
+  border-right: 1px solid var(--gold-dark);
   cursor: pointer;
   color: var(--cream-dim);
   transition: all 0.2s;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   white-space: nowrap;
-}
-
-.mode-btn:not(:last-child) { border-right: 1px solid var(--gold-dark); }
-.mode-btn.active { background: rgba(201,168,76,0.2); color: var(--gold-light); }
-.mode-btn:hover:not(.active) { color: var(--cream); background: rgba(255,255,255,0.05); }
-
-.range-group {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 13px;
-  color: var(--cream-dim);
-  font-family: 'Cinzel', serif;
-}
-
-.range-group input[type=number] {
-  width: 50px;
-  padding: 6px 8px;
-  font-size: 13px;
-  font-family: 'Cinzel', serif;
-  border: 1px solid var(--gold-dark);
-  border-radius: 5px;
-  background: rgba(0,0,0,0.3);
-  color: var(--gold-light);
   text-align: center;
 }
+.mode-btn:last-child { border-right: none; }
+.mode-btn.active { background: rgba(201,168,76,0.2); color: var(--gold-light); }
+.mode-btn:hover:not(.active) { color: var(--cream); background: rgba(255,255,255,0.05); }
+.mode-btn.worst-btn.active { background: rgba(231,76,60,0.2); color: #e87070; border-color: rgba(231,76,60,0.4); }
 
+.range-group { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--cream-dim); font-family: 'Cinzel', serif; }
+.range-group input[type=number] { width: 50px; padding: 6px 8px; font-size: 13px; font-family: 'Cinzel', serif; border: 1px solid var(--gold-dark); border-radius: 5px; background: rgba(0,0,0,0.3); color: var(--gold-light); text-align: center; }
 .range-group input[type=number]:focus { outline: none; border-color: var(--gold); }
 
-.delay-group {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  color: var(--cream-dim);
-  font-family: 'Cinzel', serif;
-}
+.delay-group { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--cream-dim); font-family: 'Cinzel', serif; }
+.delay-group select { padding: 6px 10px; font-size: 12px; font-family: 'Cinzel', serif; border: 1px solid var(--gold-dark); border-radius: 5px; background: rgba(0,0,0,0.3); color: var(--gold-light); cursor: pointer; }
 
-.delay-group select {
-  padding: 6px 10px;
-  font-size: 12px;
-  font-family: 'Cinzel', serif;
-  border: 1px solid var(--gold-dark);
-  border-radius: 5px;
-  background: rgba(0,0,0,0.3);
-  color: var(--gold-light);
-  cursor: pointer;
-}
+.wicked-divider { width: 1px; height: 22px; background: var(--gold-dark); opacity: 0.4; }
 
-.wicked-divider {
-  width: 1px;
-  height: 22px;
-  background: var(--gold-dark);
-  opacity: 0.4;
-}
-
-.action-btn {
-  padding: 6px 14px;
-  font-size: 12px;
-  font-family: 'Cinzel', serif;
-  border: 1px solid var(--gold-dark);
-  border-radius: 5px;
-  background: rgba(201,168,76,0.1);
-  color: var(--gold);
-  cursor: pointer;
-  transition: all 0.2s;
-  letter-spacing: 0.05em;
-}
-
+.action-btn { padding: 6px 14px; font-size: 12px; font-family: 'Cinzel', serif; border: 1px solid var(--gold-dark); border-radius: 5px; background: rgba(201,168,76,0.1); color: var(--gold); cursor: pointer; transition: all 0.2s; letter-spacing: 0.05em; }
 .action-btn:hover { background: rgba(201,168,76,0.25); border-color: var(--gold); }
 
-/* ── Progress ── */
-.progress-row {
+/* ── Mode / Timed toggle row ── */
+.top-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 0.75rem;
-  margin-bottom: 1.5rem;
-  padding: 0 4px;
+  width: 100%;
+  max-width: 380px;
+  margin-bottom: 4px;
 }
 
+.timed-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  color: var(--cream-dim);
+  letter-spacing: 0.05em;
+  user-select: none;
+}
+
+.toggle-switch {
+  width: 36px; height: 20px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid var(--gold-dark);
+  border-radius: 10px;
+  position: relative;
+  transition: background 0.2s;
+}
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--gold-dark);
+  transition: transform 0.2s, background 0.2s;
+}
+.toggle-switch.on { background: rgba(201,168,76,0.25); border-color: var(--gold); }
+.toggle-switch.on::after { transform: translateX(16px); background: var(--gold); }
+
+.settings-cog {
+  background: none;
+  border: 1px solid var(--gold-dark);
+  border-radius: 5px;
+  color: var(--gold-dark);
+  cursor: pointer;
+  padding: 4px 7px;
+  font-size: 15px;
+  line-height: 1;
+  transition: all 0.2s;
+}
+.settings-cog:hover { color: var(--gold); border-color: var(--gold); }
+
+/* ── Progress ── */
+.progress-row { display: flex; align-items: center; justify-content: space-between; margin-top: 0.75rem; margin-bottom: 1.5rem; padding: 0 4px; }
 .progress { font-size: 13px; color: var(--cream-dim); font-family: 'Cinzel', serif; }
 .progress strong { color: var(--gold); font-weight: 600; }
-
-.round-badge {
-  font-size: 11px;
-  font-family: 'Cinzel', serif;
-  color: var(--gold-dark);
-  background: rgba(201,168,76,0.1);
-  border: 1px solid var(--gold-dark);
-  border-radius: 999px;
-  padding: 3px 10px;
-  letter-spacing: 0.05em;
-}
+.round-badge { font-size: 11px; font-family: 'Cinzel', serif; color: var(--gold-dark); background: rgba(201,168,76,0.1); border: 1px solid var(--gold-dark); border-radius: 999px; padding: 3px 10px; letter-spacing: 0.05em; }
 
 /* ── Card ── */
-.card-scene {
-  display: flex;
-  justify-content: center;
-  perspective: 1200px;
-  margin-bottom: 1rem;
-  filter: drop-shadow(0 20px 40px rgba(0,0,0,0.7));
-}
-
-.card-inner {
-  position: relative;
-  width: 220px;
-  height: 320px;
-  transform-style: preserve-3d;
-  transition: transform 0.65s cubic-bezier(0.4,0,0.2,1);
-}
-
+.card-scene { display: flex; justify-content: center; perspective: 1200px; margin-bottom: 1rem; filter: drop-shadow(0 20px 40px rgba(0,0,0,0.7)); }
+.card-inner { position: relative; width: 220px; height: 320px; transform-style: preserve-3d; transition: transform 0.65s cubic-bezier(0.4,0,0.2,1); }
 .card-scene.flipped .card-inner { transform: rotateY(180deg); }
+.card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 16px; overflow: hidden; }
 
-.card-face {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-/* ── Card front (question face) ── */
-.card-front {
-  background: var(--card-bg);
-  border: 2px solid var(--gold-dark);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 1rem;
-}
-
-.corner-tl {
-  position: absolute;
-  top: 10px; left: 12px;
-  display: flex; flex-direction: column; align-items: center; line-height: 1;
-}
-
-.corner-br {
-  position: absolute;
-  bottom: 10px; right: 12px;
-  display: flex; flex-direction: column; align-items: center; line-height: 1;
-  transform: rotate(180deg);
-}
-
-.corner-val {
-  font-family: 'Cinzel', serif;
-  font-size: 17px; font-weight: 700; line-height: 1;
-}
-
+.card-front { background: var(--card-bg); border: 2px solid var(--gold-dark); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 1rem; }
+.corner-tl { position: absolute; top: 10px; left: 12px; display: flex; flex-direction: column; align-items: center; line-height: 1; }
+.corner-br { position: absolute; bottom: 10px; right: 12px; display: flex; flex-direction: column; align-items: center; line-height: 1; transform: rotate(180deg); }
+.corner-val { font-family: 'Cinzel', serif; font-size: 17px; font-weight: 700; line-height: 1; }
 .corner-suit { font-size: 14px; line-height: 1; }
 
-/* ── Card back (answer / question back) ── */
-.card-back {
-  border: 2px solid var(--gold);
-  transform: rotateY(180deg);
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 6px; padding: 1.5rem;
-  background: var(--card-bg);
-}
-
-.card-back.card-back-blue {
-  background: #1a2a4a;
-  border-color: var(--gold);
-}
-
-.card-back-svg {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  border-radius: 14px; overflow: hidden; pointer-events: none;
-}
-
-.card-back .corner-val {
-  font-family: 'Cinzel', serif;
-  font-size: 16px; font-weight: 700; line-height: 1; color: var(--black);
-  position: relative; z-index: 1;
-}
-
+.card-back { border: 2px solid var(--gold); transform: rotateY(180deg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 1.5rem; background: var(--card-bg); }
+.card-back.card-back-blue { background: #1a2a4a; border-color: var(--gold); }
+.card-back-svg { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 14px; overflow: hidden; pointer-events: none; }
+.card-back .corner-val { font-family: 'Cinzel', serif; font-size: 16px; font-weight: 700; line-height: 1; color: var(--black); position: relative; z-index: 1; }
 .card-back.card-back-blue .corner-val { color: var(--gold-light); }
-
 .card-back .corner-suit { font-size: 13px; line-height: 1; position: relative; z-index: 1; }
 
-/* Card content */
-.suit-symbol, .corner-suit {
-  font-family: 'Segoe UI Symbol', 'Apple Symbols', 'Arial Unicode MS', Georgia, serif;
-  font-style: normal;
-  font-variant-emoji: text;
-  -webkit-font-feature-settings: "liga" off;
-  text-rendering: geometricPrecision;
-}
+.suit-symbol, .corner-suit { font-family: 'Segoe UI Symbol', 'Apple Symbols', 'Arial Unicode MS', Georgia, serif; font-style: normal; font-variant-emoji: text; -webkit-font-feature-settings: "liga" off; text-rendering: geometricPrecision; }
 .suit-symbol { font-size: 76px; line-height: 1; text-shadow: 0 2px 8px rgba(0,0,0,0.15); }
 .card-label { font-family: 'Cinzel', serif; font-size: 15px; font-weight: 600; letter-spacing: 0.03em; }
 .card-sublabel { font-size: 12px; color: #888; font-style: italic; text-align: center; }
-
-.position-number {
-  font-family: 'Cinzel', serif;
-  font-size: 82px; font-weight: 700; line-height: 1;
-  color: var(--black); text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.phase-label {
-  font-family: 'Cinzel', serif;
-  font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase;
-  color: #aaa; margin-bottom: 2px; text-align: center;
-}
-
+.position-number { font-family: 'Cinzel', serif; font-size: 82px; font-weight: 700; line-height: 1; color: var(--black); text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.phase-label { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: #aaa; margin-bottom: 2px; text-align: center; }
 .card-back .phase-label { color: var(--gold-dark); }
 .card-back .card-label { color: var(--cream); }
 .card-back .position-number { color: var(--gold-light); text-shadow: 0 0 20px rgba(201,168,76,0.3); }
 .card-back .card-sublabel { color: var(--cream-dim); }
-
 .red { color: var(--red); }
 .card-back .red { color: #e87070; }
 .card-back .corner-suit.red, .card-back .corner-val.red { color: #e87070; }
 
-/* Idle card */
 .idle-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .idle-text { font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(201,168,76,0.5); text-align: center; line-height: 2; }
 
-/* Card state classes */
-.card-idle {
-  background: #1a2a4a !important;
-  border-color: rgba(201,168,76,0.3) !important;
-  background-image: none !important;
-}
+.card-idle { background: #1a2a4a !important; border-color: rgba(201,168,76,0.3) !important; background-image: none !important; }
+.card-felt { background: #1a2a4a !important; border-color: var(--gold) !important; background-image: none !important; }
+.card-cream { background: var(--card-bg) !important; border-color: var(--gold-dark) !important; background-image: none !important; }
 
-.card-felt {
-  background: #1a2a4a !important;
-  border-color: var(--gold) !important;
-  background-image: none !important;
-}
-
-.card-cream {
-  background: var(--card-bg) !important;
-  border-color: var(--gold-dark) !important;
-  background-image: none !important;
-}
-
-/* Gold colour helpers */
 .gold { color: var(--gold-light); }
 .gold-dim { color: var(--gold-dark); }
 .gold-bright { color: var(--gold-light); text-shadow: 0 0 20px rgba(201,168,76,0.3); }
+.idle-suit { font-size: 52px; opacity: 0.12; color: var(--gold); }
+
+/* Timed mode tap overlay */
+.card-scene.timed-mode { cursor: pointer; }
+.card-scene.timed-mode .card-inner:hover { filter: brightness(1.05); }
+
+/* Reaction time flash */
+.reaction-flash {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Cinzel', serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--gold);
+  text-shadow: 0 0 20px rgba(201,168,76,0.8);
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.reaction-flash.show { opacity: 1; }
 
 /* ── Timer bar ── */
-.timer-wrap {
-  height: 3px;
-  background: rgba(255,255,255,0.08);
-  border-radius: 2px;
-  margin-bottom: 1.25rem;
-  overflow: hidden;
-}
-
-.timer-bar {
-  height: 3px;
-  background: linear-gradient(to right, var(--gold-dark), var(--gold));
-  border-radius: 2px;
-  width: 100%;
-}
+.timer-wrap { height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; margin-bottom: 1.25rem; overflow: hidden; }
+.timer-bar { height: 3px; background: linear-gradient(to right, var(--gold-dark), var(--gold)); border-radius: 2px; width: 100%; }
 
 /* ── Play button ── */
-.play-row {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 1.25rem;
-}
-
-.big-btn {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 48px;
-  font-size: 15px;
-  font-family: 'Cinzel', serif;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  border: 1px solid var(--gold);
-  border-radius: 8px;
-  background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.05));
-  color: var(--gold);
-  cursor: pointer;
-  transition: all 0.25s;
-  text-transform: uppercase;
-  box-shadow: 0 0 20px rgba(201,168,76,0.1), inset 0 1px 0 rgba(255,255,255,0.05);
-}
-
-.big-btn:hover {
-  background: linear-gradient(135deg, rgba(201,168,76,0.3), rgba(201,168,76,0.1));
-  box-shadow: 0 0 30px rgba(201,168,76,0.25), inset 0 1px 0 rgba(255,255,255,0.1);
-  transform: translateY(-1px);
-}
-
+.play-row { display: flex; justify-content: center; margin-bottom: 1.25rem; }
+.big-btn { display: flex; align-items: center; gap: 12px; padding: 14px 48px; font-size: 15px; font-family: 'Cinzel', serif; font-weight: 600; letter-spacing: 0.1em; border: 1px solid var(--gold); border-radius: 8px; background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.05)); color: var(--gold); cursor: pointer; transition: all 0.25s; text-transform: uppercase; box-shadow: 0 0 20px rgba(201,168,76,0.1), inset 0 1px 0 rgba(255,255,255,0.05); }
+.big-btn:hover { background: linear-gradient(135deg, rgba(201,168,76,0.3), rgba(201,168,76,0.1)); box-shadow: 0 0 30px rgba(201,168,76,0.25), inset 0 1px 0 rgba(255,255,255,0.1); transform: translateY(-1px); }
 .big-btn:active { transform: translateY(0); }
-
-.big-btn.running {
-  border-color: #e74c3c;
-  color: #e87070;
-  background: linear-gradient(135deg, rgba(231,76,60,0.15), rgba(231,76,60,0.05));
-  box-shadow: 0 0 20px rgba(231,76,60,0.15);
-}
+.big-btn.running { border-color: #e74c3c; color: #e87070; background: linear-gradient(135deg, rgba(231,76,60,0.15), rgba(231,76,60,0.05)); box-shadow: 0 0 20px rgba(231,76,60,0.15); }
 
 /* ── Log section ── */
-.log-section {
-  border-top: 1px solid rgba(201,168,76,0.2);
-  padding-top: 1.25rem;
-}
+.log-section { border-top: 1px solid rgba(201,168,76,0.2); padding-top: 1.25rem; }
+.log-title { font-family: 'Cinzel', serif; font-size: 13px; font-weight: 600; color: var(--gold); letter-spacing: 0.08em; margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between; text-transform: uppercase; }
+.log-clear { font-size: 11px; font-family: 'Crimson Text', serif; color: var(--cream-dim); cursor: pointer; background: none; border: none; padding: 0; letter-spacing: 0; text-transform: none; font-weight: 400; }
+.log-clear:hover { color: #e87070; }
+.session-row { display: flex; gap: 10px; margin-bottom: 1rem; }
+.stat { background: rgba(0,0,0,0.3); border: 1px solid rgba(201,168,76,0.2); border-radius: 8px; padding: 10px 14px; flex: 1; text-align: center; }
+.stat-label { font-family: 'Cinzel', serif; font-size: 10px; color: var(--gold-dark); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
+.stat-val { font-family: 'Cinzel', serif; font-size: 20px; font-weight: 600; color: var(--gold-light); }
+.log-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.log-card { background: rgba(0,0,0,0.25); border: 1px solid rgba(201,168,76,0.15); border-radius: 8px; padding: 10px 12px; }
+.log-card.has-timing { border-left: 3px solid var(--gold-dark); }
+.log-card.has-timing.good { border-left-color: var(--green); }
+.log-card.has-timing.mixed { border-left-color: var(--amber); }
+.log-card.has-timing.slow { border-left-color: var(--danger); }
+.log-date { font-size: 11px; color: var(--gold-dark); margin-bottom: 3px; font-family: 'Cinzel', serif; letter-spacing: 0.04em; }
+.log-time { font-family: 'Cinzel', serif; font-size: 18px; font-weight: 600; color: var(--gold-light); }
+.log-avg { font-size: 11px; color: var(--cream-dim); margin-top: 2px; font-family: 'Cinzel', serif; }
+.log-sessions { font-size: 12px; color: var(--cream-dim); margin-top: 2px; font-style: italic; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold-dark); display: inline-block; margin-right: 8px; transition: all 0.3s; }
+.status-dot.active { background: #2ecc71; box-shadow: 0 0 8px rgba(46,204,113,0.6); }
+.sync-status { font-size: 11px; color: var(--gold-dark); margin-left: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; font-family: 'Crimson Text', serif; }
+.no-log { font-size: 14px; color: var(--cream-dim); font-style: italic; }
 
-.log-title {
+/* ── Version footer ── */
+.version-footer { text-align: center; margin-top: 2rem; font-family: 'Cinzel', serif; font-size: 10px; color: rgba(201,168,76,0.25); letter-spacing: 0.1em; }
+
+/* ══════════════════════════════════════════
+   SETTINGS MODAL
+══════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+
+.modal-box {
+  background: #0d2818;
+  border: 1px solid var(--gold-dark);
+  border-radius: 12px;
+  padding: 1.5rem;
+  width: 90%; max-width: 360px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+  transform: translateY(20px);
+  transition: transform 0.25s;
+}
+.modal-overlay.open .modal-box { transform: translateY(0); }
+
+.modal-title {
   font-family: 'Cinzel', serif;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 15px; font-weight: 700;
   color: var(--gold);
   letter-spacing: 0.08em;
-  margin-bottom: 0.85rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   text-transform: uppercase;
+  margin-bottom: 1.25rem;
+  display: flex; align-items: center; justify-content: space-between;
 }
 
-.log-clear {
-  font-size: 11px;
+.modal-close {
+  background: none; border: none;
+  color: var(--gold-dark); font-size: 18px;
+  cursor: pointer; line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.2s;
+}
+.modal-close:hover { color: var(--gold); }
+
+.setting-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(201,168,76,0.1);
+}
+.setting-row:last-child { border-bottom: none; }
+
+.setting-label {
+  font-family: 'Cinzel', serif;
+  font-size: 11px; color: var(--cream-dim);
+  letter-spacing: 0.06em;
+  flex: 1;
+}
+.setting-sublabel {
+  font-size: 10px; color: var(--gold-dark);
   font-family: 'Crimson Text', serif;
-  color: var(--cream-dim);
-  cursor: pointer;
-  background: none;
-  border: none;
-  padding: 0;
-  letter-spacing: 0;
-  text-transform: none;
-  font-weight: 400;
+  font-style: italic;
+  margin-top: 2px;
 }
 
-.log-clear:hover { color: #e87070; }
+.setting-control select,
+.setting-control input[type=number] {
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: 'Cinzel', serif;
+  border: 1px solid var(--gold-dark);
+  border-radius: 5px;
+  background: rgba(0,0,0,0.4);
+  color: var(--gold-light);
+  min-width: 80px;
+}
+.setting-control select:focus,
+.setting-control input:focus { outline: none; border-color: var(--gold); }
 
-.session-row {
-  display: flex;
-  gap: 10px;
+.setting-control input[type=number] { width: 70px; text-align: center; }
+
+.modal-save {
+  margin-top: 1.25rem;
+  width: 100%;
+  padding: 10px;
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(201,168,76,0.15);
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.modal-save:hover { background: rgba(201,168,76,0.3); }
+
+/* ══════════════════════════════════════════
+   SESSION STATS MODAL
+══════════════════════════════════════════ */
+.stats-modal-box {
+  background: #0d2818;
+  border: 1px solid var(--gold-dark);
+  border-radius: 12px;
+  padding: 1.5rem;
+  width: 94%; max-width: 420px;
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+  transform: translateY(20px);
+  transition: transform 0.25s;
+}
+.modal-overlay.open .stats-modal-box { transform: translateY(0); }
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
   margin-bottom: 1rem;
 }
 
-.stat {
+.stats-tile {
   background: rgba(0,0,0,0.3);
   border: 1px solid rgba(201,168,76,0.2);
   border-radius: 8px;
-  padding: 10px 14px;
-  flex: 1;
+  padding: 10px 12px;
   text-align: center;
 }
+.stats-tile.full-width { grid-column: 1 / -1; }
+.stats-tile.highlight { border-color: var(--gold); background: rgba(201,168,76,0.08); }
+.stats-tile.pb { border-color: #2ecc71; background: rgba(46,204,113,0.08); }
 
-.stat-label {
+.stats-tile-label { font-family: 'Cinzel', serif; font-size: 9px; color: var(--gold-dark); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 5px; }
+.stats-tile-val { font-family: 'Cinzel', serif; font-size: 22px; font-weight: 700; color: var(--gold-light); }
+.stats-tile-val.good { color: #2ecc71; }
+.stats-tile-val.bad { color: #e87070; }
+.stats-tile-sub { font-size: 11px; color: var(--cream-dim); margin-top: 3px; font-style: italic; }
+
+.graduated-list {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-top: 6px;
+}
+.grad-badge {
   font-family: 'Cinzel', serif;
   font-size: 10px;
-  color: var(--gold-dark);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin-bottom: 4px;
+  background: rgba(46,204,113,0.15);
+  border: 1px solid rgba(46,204,113,0.4);
+  color: #2ecc71;
+  border-radius: 4px;
+  padding: 3px 7px;
 }
 
-.stat-val {
+.stats-section-title {
   font-family: 'Cinzel', serif;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--gold-light);
+  font-size: 11px;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin: 1rem 0 0.5rem;
+  display: flex; align-items: center; gap: 8px;
+}
+.stats-section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(201,168,76,0.2);
 }
 
-.log-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 8px;
-}
-
-.log-card {
+/* Chart canvas */
+.chart-wrap {
   background: rgba(0,0,0,0.25);
   border: 1px solid rgba(201,168,76,0.15);
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 12px;
+  margin-bottom: 8px;
 }
 
-.log-date { font-size: 11px; color: var(--gold-dark); margin-bottom: 3px; font-family: 'Cinzel', serif; letter-spacing: 0.04em; }
-.log-time { font-family: 'Cinzel', serif; font-size: 18px; font-weight: 600; color: var(--gold-light); }
-.log-sessions { font-size: 12px; color: var(--cream-dim); margin-top: 2px; font-style: italic; }
+canvas { display: block; width: 100% !important; }
 
-.status-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--gold-dark);
-  display: inline-block; margin-right: 8px;
-  transition: all 0.3s;
+.stats-close-btn {
+  margin-top: 1rem;
+  width: 100%;
+  padding: 10px;
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(201,168,76,0.1);
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.stats-close-btn:hover { background: rgba(201,168,76,0.25); }
+
+/* PB crown */
+.pb-banner {
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  color: #2ecc71;
+  letter-spacing: 0.08em;
+  padding: 8px;
+  background: rgba(46,204,113,0.1);
+  border: 1px solid rgba(46,204,113,0.3);
+  border-radius: 8px;
+  margin-bottom: 1rem;
 }
 
-.status-dot.active { background: #2ecc71; box-shadow: 0 0 8px rgba(46,204,113,0.6); }
-
-.sync-status { font-size: 11px; color: var(--gold-dark); margin-left: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; font-family: 'Crimson Text', serif; }
-
-.no-log { font-size: 14px; color: var(--cream-dim); font-style: italic; }
-
-/* ── Idle card placeholder ── */
-.idle-suit { font-size: 52px; opacity: 0.12; color: var(--gold); }
+/* Slow card list */
+.slow-card-list {
+  display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px;
+}
+.slow-badge {
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  background: rgba(231,76,60,0.1);
+  border: 1px solid rgba(231,76,60,0.3);
+  color: #e87070;
+  border-radius: 4px;
+  padding: 3px 7px;
+}
 </style>
 </head>
 <body>
@@ -539,12 +513,26 @@ body {
 
   <div class="controls">
     <div class="mode-group">
-      <div class="mode-toggle">
-        <button class="mode-btn active" id="btn-ptc" onclick="toggleMode('pos-to-card')">Pos → Card</button>
-        <button class="mode-btn" id="btn-ctp" onclick="toggleMode('card-to-pos')">Card → Pos</button>
-        <button class="mode-btn" id="btn-bef" onclick="toggleMode('card-before')">Card Before</button>
-        <button class="mode-btn" id="btn-aft" onclick="toggleMode('card-after')">Card After</button>
+      <div class="top-row">
+        <label class="timed-toggle" id="timed-label" onclick="toggleTimedMode()">
+          <div class="toggle-switch" id="timed-switch"></div>
+          <span id="timed-label-text">Auto Mode</span>
+        </label>
+        <button class="settings-cog" onclick="openSettings()" title="Settings">⚙</button>
       </div>
+
+      <div class="mode-toggle">
+        <div class="mode-row">
+          <button class="mode-btn active" id="btn-ptc" onclick="toggleMode('pos-to-card')">Pos → Card</button>
+          <button class="mode-btn" id="btn-ctp" onclick="toggleMode('card-to-pos')">Card → Pos</button>
+        </div>
+        <div class="mode-row">
+          <button class="mode-btn" id="btn-bef" onclick="toggleMode('card-before')">Card Before</button>
+          <button class="mode-btn" id="btn-aft" onclick="toggleMode('card-after')">Card After</button>
+          <button class="mode-btn worst-btn" id="btn-worst" onclick="toggleMode('worst-cards')">Worst Cards</button>
+        </div>
+      </div>
+
       <div class="settings-row">
         <div class="range-group">
           <span>Cards</span>
@@ -552,8 +540,8 @@ body {
           <span>to</span>
           <input type="number" id="range-to" value="52" min="1" max="52" onchange="saveSettings()" />
         </div>
-        <div class="wicked-divider"></div>
-        <div class="delay-group">
+        <div class="wicked-divider" id="delay-divider"></div>
+        <div class="delay-group" id="delay-group">
           <span>Delay</span>
           <select id="delay-sel" onchange="onDelayChange()">
             <option value="1000">1s</option>
@@ -580,12 +568,9 @@ body {
     </button>
   </div>
 
-  <div class="card-scene" id="card-scene">
+  <div class="card-scene" id="card-scene" onclick="onCardTap()">
     <div class="card-inner" id="card-inner">
       <div class="card-face card-front" id="front-face">
-        <div class="idle-back-pattern"></div>
-        <div class="idle-border-outer"></div>
-        <div class="idle-border-inner"></div>
         <div class="idle-content">
           <div class="idle-suit">♠</div>
           <div class="idle-text">Press<br>Start<br>to Begin</div>
@@ -593,6 +578,7 @@ body {
       </div>
       <div class="card-face card-back" id="back-face"></div>
     </div>
+    <div class="reaction-flash" id="reaction-flash"></div>
   </div>
 
   <div class="timer-wrap"><div class="timer-bar" id="timer-bar"></div></div>
@@ -618,8 +604,89 @@ body {
     <div class="log-grid" id="log-grid"><div class="no-log">No sessions yet — start drilling!</div></div>
   </div>
 
+  <div class="version-footer">V5 · 13th May 2026</div>
+
 </div>
 
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal-box">
+    <div class="modal-title">
+      Settings
+      <button class="modal-close" onclick="closeSettings()">✕</button>
+    </div>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Slow card threshold</div>
+        <div class="setting-sublabel">Cards above this avg are "slow"</div>
+      </div>
+      <div class="setting-control">
+        <select id="set-threshold">
+          <option value="1000">1.0s</option>
+          <option value="1500">1.5s</option>
+          <option value="2000" selected>2.0s</option>
+          <option value="3000">3.0s</option>
+          <option value="5000">5.0s</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Worst cards count</div>
+        <div class="setting-sublabel">0 = all cards over threshold</div>
+      </div>
+      <div class="setting-control">
+        <input type="number" id="set-worst-count" value="0" min="0" max="52" />
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Target time</div>
+        <div class="setting-sublabel">Your personal mastery goal</div>
+      </div>
+      <div class="setting-control">
+        <select id="set-target">
+          <option value="1000">1.0s</option>
+          <option value="1500" selected>1.5s</option>
+          <option value="2000">2.0s</option>
+          <option value="3000">3.0s</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Rolling window</div>
+        <div class="setting-sublabel">Attempts used for avg per card</div>
+      </div>
+      <div class="setting-control">
+        <select id="set-window">
+          <option value="3">3</option>
+          <option value="5">5</option>
+          <option value="10" selected>10</option>
+          <option value="20">20</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="modal-save" onclick="saveSettingsModal()">Save Settings</button>
+  </div>
+</div>
+
+<!-- Session Stats Modal -->
+<div class="modal-overlay" id="stats-modal">
+  <div class="stats-modal-box">
+    <div class="modal-title">
+      Session Results
+      <button class="modal-close" onclick="closeStatsModal()">✕</button>
+    </div>
+    <div id="stats-modal-content"></div>
+    <button class="stats-close-btn" onclick="closeStatsModal()">Done</button>
+  </div>
+</div>
 
 <script>
 if ('serviceWorker' in navigator) {
@@ -629,6 +696,8 @@ if ('serviceWorker' in navigator) {
 const AUDIO_BASE = 'https://ilkleyman.github.io/mnemonica-audio/audio/';
 const JSONBIN_KEY = '$2a$10$JVbcJI4T4huSZPjzJcrydOkeFpAfTqp1pdowSu4OQLRxClvgiwR42';
 const JSONBIN_API = 'https://api.jsonbin.io/v3/b';
+const BIN_ID = '69f0f3ffaaba8821974acdb9';
+
 const CARD_BACK_SVG = `<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%' viewBox='0 0 220 320' preserveAspectRatio='xMidYMid slice'>
   <defs>
     <pattern id='cb-trellis' x='0' y='0' width='20' height='20' patternUnits='userSpaceOnUse'>
@@ -660,7 +729,6 @@ const CARD_BACK_SVG = `<svg xmlns='http://www.w3.org/2000/svg' width='100%' heig
   <polygon points='110,28 114,32 110,36 106,32' fill='#c9a84c' opacity='0.5'/>
   <polygon points='110,284 114,288 110,292 106,288' fill='#c9a84c' opacity='0.5'/>
 </svg>`;
-const BIN_ID = '69f0f3ffaaba8821974acdb9';
 
 const STACK = [
   {pos:1,v:'4',s:'C'},{pos:2,v:'2',s:'H'},{pos:3,v:'7',s:'D'},{pos:4,v:'3',s:'C'},
@@ -678,12 +746,11 @@ const STACK = [
   {pos:49,v:'10',s:'D'},{pos:50,v:'6',s:'C'},{pos:51,v:'A',s:'H'},{pos:52,v:'9',s:'D'}
 ];
 
-const SUITS    = {H:'\u2665',D:'\u2666',C:'\u2663',S:'\u2660'};
-const RED      = ['H','D'];
-const VNAMES   = {A:'Ace','2':'Two','3':'Three','4':'Four','5':'Five','6':'Six','7':'Seven','8':'Eight','9':'Nine','10':'Ten',J:'Jack',Q:'Queen',K:'King'};
-const SNAMES   = {H:'Hearts',D:'Diamonds',C:'Clubs',S:'Spades'};
+const SUITS  = {H:'\u2665',D:'\u2666',C:'\u2663',S:'\u2660'};
+const RED    = ['H','D'];
+const VNAMES = {A:'Ace','2':'Two','3':'Three','4':'Four','5':'Five','6':'Six','7':'Seven','8':'Eight','9':'Nine','10':'Ten',J:'Jack',Q:'Queen',K:'King'};
+const SNAMES = {H:'Hearts',D:'Diamonds',C:'Clubs',S:'Spades'};
 
-/* Suit rendering — SVG paths for S and C to guarantee solid fill on all devices */
 const SUIT_PATHS = {
   S: 'M50 5 C50 5 10 35 10 58 C10 75 25 82 40 76 C35 88 28 95 18 98 L82 98 C72 95 65 88 60 76 C75 82 90 75 90 58 C90 35 50 5 50 5Z',
   C: 'M50 8 C38 8 28 18 28 30 C28 38 32 45 38 49 C30 47 22 50 18 58 C14 67 19 78 28 82 C34 85 41 83 46 79 C43 88 38 95 28 98 L72 98 C62 95 57 88 54 79 C59 83 66 85 72 82 C81 78 86 67 82 58 C78 50 70 47 62 49 C68 45 72 38 72 30 C72 18 62 8 50 8Z'
@@ -696,14 +763,106 @@ function suitSymbol(s, color, sizePx) {
   return `<span style="color:${color};font-size:${sizePx}px;line-height:1">${SUITS[s]}</span>`;
 }
 
-/* ── State ── */
+function cardKey(card) { return card.v + card.s; }
+
+/* ══════════════════════════════════════════
+   SETTINGS STATE
+══════════════════════════════════════════ */
+let appSettings = {
+  threshold: 2000,
+  worstCount: 0,
+  target: 1500,
+  window: 10
+};
+
+function loadAppSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem('mnemonica_app_settings'));
+    if (s) appSettings = { ...appSettings, ...s };
+  } catch(e) {}
+  document.getElementById('set-threshold').value = appSettings.threshold;
+  document.getElementById('set-worst-count').value = appSettings.worstCount;
+  document.getElementById('set-target').value = appSettings.target;
+  document.getElementById('set-window').value = appSettings.window;
+}
+
+function saveSettingsModal() {
+  appSettings.threshold = parseInt(document.getElementById('set-threshold').value);
+  appSettings.worstCount = parseInt(document.getElementById('set-worst-count').value) || 0;
+  appSettings.target = parseInt(document.getElementById('set-target').value);
+  appSettings.window = parseInt(document.getElementById('set-window').value);
+  localStorage.setItem('mnemonica_app_settings', JSON.stringify(appSettings));
+  closeSettings();
+}
+
+function openSettings() { document.getElementById('settings-modal').classList.add('open'); }
+function closeSettings() { document.getElementById('settings-modal').classList.remove('open'); }
+
+/* ══════════════════════════════════════════
+   TIMED MODE
+══════════════════════════════════════════ */
+let timedMode = false;
+
+function toggleTimedMode() {
+  timedMode = !timedMode;
+  document.getElementById('timed-switch').classList.toggle('on', timedMode);
+  document.getElementById('timed-label-text').textContent = timedMode ? 'Timed Mode' : 'Auto Mode';
+  const dg = document.getElementById('delay-group');
+  const dd = document.getElementById('delay-divider');
+  dg.style.display = timedMode ? 'none' : '';
+  dd.style.display = timedMode ? 'none' : '';
+  const scene = document.getElementById('card-scene');
+  scene.classList.toggle('timed-mode', timedMode);
+  if (running) stopPlay();
+  saveSettings();
+}
+
+/* ══════════════════════════════════════════
+   CARD TIMING DATA  (stored in JSONBin under 'timing' key)
+══════════════════════════════════════════ */
+// cardTimings: { "4C": [1200, 980, ...], ... }  — rolling arrays
+let cardTimings = {};
+
+function getCardAvg(key) {
+  const arr = cardTimings[key];
+  if (!arr || arr.length === 0) return null;
+  return arr.reduce((a, b) => a + b, 0) / arr.length;
+}
+
+function addTiming(key, ms) {
+  if (!cardTimings[key]) cardTimings[key] = [];
+  cardTimings[key].push(ms);
+  // Keep only rolling window
+  if (cardTimings[key].length > appSettings.window) {
+    cardTimings[key] = cardTimings[key].slice(-appSettings.window);
+  }
+}
+
+function getSlowCards() {
+  const allCards = STACK.filter(c => {
+    const avg = getCardAvg(cardKey(c));
+    return avg !== null && avg > appSettings.threshold;
+  }).sort((a, b) => (getCardAvg(cardKey(b)) || 0) - (getCardAvg(cardKey(a)) || 0));
+  if (appSettings.worstCount > 0) return allCards.slice(0, appSettings.worstCount);
+  return allCards;
+}
+
+/* ══════════════════════════════════════════
+   MAIN STATE
+══════════════════════════════════════════ */
 let activeModes = new Set(['pos-to-card']), deck = [], idx = 0, round = 1;
 let running = false, sessionId = 0;
-let t1 = null, t2 = null, t3 = null, t4 = null;  // all timers
+let t1 = null, t2 = null, t3 = null, t4 = null;
 let cardPhrases = [], posPhrases = [], linkPhrases = [], introPhrases = [], beforePhrases = [], afterPhrases = [];
 let wickedTimer = null, wickedDelay = 5000;
 let sessionStart = null, sessionTimer = null, sessionSeconds = 0;
 let currentAudio = null;
+
+// Timed mode per-session tracking
+let questionStartTime = null;
+let waitingForTap = false;
+let sessionTimings = []; // [{key, ms, pos, v, s, qtype}]
+let prevCardAvgs = {}; // snapshot of averages at session start
 
 /* ── Flip sound ── */
 function playFlipSound() {
@@ -717,10 +876,7 @@ function playFlipSound() {
     const src = ctx.createBufferSource();
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.18, ctx.currentTime);
-    src.buffer = buf;
-    src.connect(gain);
-    gain.connect(ctx.destination);
-    src.start();
+    src.buffer = buf; src.connect(gain); gain.connect(ctx.destination); src.start();
   } catch(e) {}
 }
 
@@ -749,16 +905,10 @@ async function saveBin(data) {
 
 /* ── Audio ── */
 const audioCache = {};
-
 function preloadAudio(url) {
   if (audioCache[url]) return;
-  const a = new Audio();
-  a.preload = 'auto';
-  a.src = url;
-  a.load();
-  audioCache[url] = true;
+  const a = new Audio(); a.preload = 'auto'; a.src = url; a.load(); audioCache[url] = true;
 }
-
 function tryLoad(url) {
   return new Promise(resolve => {
     const a = new Audio();
@@ -767,7 +917,6 @@ function tryLoad(url) {
     a.src = url; a.load();
   });
 }
-
 async function reloadPhrases() {
   cardPhrases = []; posPhrases = []; linkPhrases = []; introPhrases = []; beforePhrases = []; afterPhrases = [];
   for (let i = 1; i <= 20; i++) {
@@ -805,26 +954,23 @@ function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 function playChain(urls, onDone) {
   const list = urls.filter(Boolean);
   if (!list.length) { if (onDone) onDone(); return; }
-  let i = 0;
-  let active = true;
+  let i = 0, active = true;
   function next() {
     if (!running || !active) return;
     if (i >= list.length) { if (onDone) onDone(); return; }
     const a = new Audio(list[i++]);
     currentAudio = a;
     a.onended = next;
-    a.onerror = () => { setTimeout(next, 100); }; // small delay on error
+    a.onerror = () => { setTimeout(next, 100); };
     a.play().catch(() => { setTimeout(next, 100); });
   }
   next();
-  return () => { active = false; }; // return cancel function
+  return () => { active = false; };
 }
 
 function stopCurrentAudio() {
   if (currentAudio) {
-    currentAudio.onended = null;
-    currentAudio.onerror = null;
-    currentAudio.pause();
+    currentAudio.onended = null; currentAudio.onerror = null; currentAudio.pause();
     try { currentAudio.src = ''; } catch(e) {}
     currentAudio = null;
   }
@@ -849,6 +995,21 @@ function getRange() {
 function buildDeck(cards) {
   const modes = [...activeModes];
   if (modes.length === 0) return shuffle(cards.map(c => ({...c, qtype:'pos-to-card'})));
+
+  if (modes.includes('worst-cards')) {
+    const slow = getSlowCards();
+    if (slow.length === 0) {
+      // fallback — no slow cards yet, drill everything
+      const nonWorst = modes.filter(m => m !== 'worst-cards');
+      const fallbackModes = nonWorst.length > 0 ? nonWorst : ['pos-to-card'];
+      return shuffle(cards.flatMap(c => fallbackModes.map(m => ({...c, qtype: m}))));
+    }
+    // Only use non-worst modes alongside worst cards
+    const otherModes = modes.filter(m => m !== 'worst-cards');
+    const qtypes = otherModes.length > 0 ? otherModes : ['pos-to-card'];
+    return shuffle(slow.flatMap(c => qtypes.map(m => ({...c, qtype: m}))));
+  }
+
   let all = [];
   modes.forEach(m => {
     let filtered = cards;
@@ -859,17 +1020,10 @@ function buildDeck(cards) {
   return shuffle(all);
 }
 
-function applyRange() {
-  if (running) stopPlay();
-  deck = buildDeck(getRange()); idx = 0; round = 1;
-  updateProgress(); resetFaces();
-  saveSettings();
-}
-
 function toggleMode(m) {
-  const btnMap = {'pos-to-card':'ptc','card-to-pos':'ctp','card-before':'bef','card-after':'aft'};
+  const btnMap = {'pos-to-card':'ptc','card-to-pos':'ctp','card-before':'bef','card-after':'aft','worst-cards':'worst'};
   if (activeModes.has(m)) {
-    if (activeModes.size === 1) return; // always keep at least one active
+    if (activeModes.size === 1) return;
     activeModes.delete(m);
     document.getElementById('btn-' + btnMap[m]).classList.remove('active');
   } else {
@@ -878,8 +1032,7 @@ function toggleMode(m) {
   }
   if (running) stopPlay();
   deck = buildDeck(getRange()); idx = 0; round = 1;
-  updateProgress(); resetFaces();
-  saveSettings();
+  updateProgress(); resetFaces(); saveSettings();
 }
 
 /* ── Card rendering ── */
@@ -921,14 +1074,8 @@ function renderFront(card) {
     const suit_sm = suitSymbol(card.s, color, 15);
     const lbl = card.qtype === 'card-before' ? 'What card comes before?' : 'What card comes after?';
     f.innerHTML = `
-      <div class="corner-tl">
-        <div class="corner-val" style="color:${color}">${card.v}</div>
-        <div>${suit_sm}</div>
-      </div>
-      <div class="corner-br">
-        <div class="corner-val" style="color:${color}">${card.v}</div>
-        <div>${suit_sm}</div>
-      </div>
+      <div class="corner-tl"><div class="corner-val" style="color:${color}">${card.v}</div><div>${suit_sm}</div></div>
+      <div class="corner-br"><div class="corner-val" style="color:${color}">${card.v}</div><div>${suit_sm}</div></div>
       <div class="phase-label">${lbl}</div>
       ${suit_lg}
       <div class="card-label" style="color:${color}">${VNAMES[card.v]} of ${SNAMES[card.s]}</div>`;
@@ -937,14 +1084,8 @@ function renderFront(card) {
     const suit_lg = suitSymbol(card.s, color, 72);
     const suit_sm = suitSymbol(card.s, color, 15);
     f.innerHTML = `
-      <div class="corner-tl">
-        <div class="corner-val" style="color:${color}">${card.v}</div>
-        <div>${suit_sm}</div>
-      </div>
-      <div class="corner-br">
-        <div class="corner-val" style="color:${color}">${card.v}</div>
-        <div>${suit_sm}</div>
-      </div>
+      <div class="corner-tl"><div class="corner-val" style="color:${color}">${card.v}</div><div>${suit_sm}</div></div>
+      <div class="corner-br"><div class="corner-val" style="color:${color}">${card.v}</div><div>${suit_sm}</div></div>
       <div class="phase-label">What position?</div>
       ${suit_lg}
       <div class="card-label" style="color:${color}">${VNAMES[card.v]} of ${SNAMES[card.s]}</div>`;
@@ -953,7 +1094,6 @@ function renderFront(card) {
 
 function renderBack(card) {
   const b = document.getElementById('back-face');
-  // For card-before: answer is the card at pos-1; for card-after: pos+1
   let ansCard = card;
   if (card.qtype === 'card-before') ansCard = STACK.find(c => c.pos === card.pos - 1) || card;
   if (card.qtype === 'card-after')  ansCard = STACK.find(c => c.pos === card.pos + 1) || card;
@@ -963,14 +1103,8 @@ function renderBack(card) {
     const suit_lg = suitSymbol(ansCard.s, color, 72);
     const suit_sm = suitSymbol(ansCard.s, color, 15);
     b.innerHTML = `
-      <div class="corner-tl">
-        <div class="corner-val" style="color:${color}">${ansCard.v}</div>
-        <div>${suit_sm}</div>
-      </div>
-      <div class="corner-br">
-        <div class="corner-val" style="color:${color}">${ansCard.v}</div>
-        <div>${suit_sm}</div>
-      </div>
+      <div class="corner-tl"><div class="corner-val" style="color:${color}">${ansCard.v}</div><div>${suit_sm}</div></div>
+      <div class="corner-br"><div class="corner-val" style="color:${color}">${ansCard.v}</div><div>${suit_sm}</div></div>
       ${suit_lg}
       <div class="card-label" style="color:${color}">${VNAMES[ansCard.v]} of ${SNAMES[ansCard.s]}</div>`;
   } else {
@@ -987,18 +1121,15 @@ function renderBack(card) {
 /* ── Timer bar ── */
 function animateBar(ms) {
   const bar = document.getElementById('timer-bar');
-  bar.style.transition = 'none';
-  bar.style.width = '100%';
+  bar.style.transition = 'none'; bar.style.width = '100%';
   requestAnimationFrame(() => requestAnimationFrame(() => {
-    bar.style.transition = `width ${ms}ms linear`;
-    bar.style.width = '0%';
+    bar.style.transition = `width ${ms}ms linear`; bar.style.width = '0%';
   }));
 }
 
 function stopBar() {
   const bar = document.getElementById('timer-bar');
-  bar.style.transition = 'none';
-  bar.style.width = '100%';
+  bar.style.transition = 'none'; bar.style.width = '100%';
 }
 
 /* ── Audio chain ── */
@@ -1037,26 +1168,51 @@ function playAnswer(card, onDone) {
 
 /* ── Wicked Mode ── */
 function isWicked() { return document.getElementById('delay-sel').value === 'wicked'; }
-
-function onDelayChange() {
-  saveSettings();
-}
-
-function startWicked() {
-  wickedDelay = 7000;
-  wickedTimer = setInterval(() => {
-    wickedDelay = Math.max(1000, wickedDelay - 500);
-  }, 60000);
-}
-
-function stopWicked() {
-  clearInterval(wickedTimer); wickedTimer = null;
-}
-
+function onDelayChange() { saveSettings(); }
+function startWicked() { wickedDelay = 7000; wickedTimer = setInterval(() => { wickedDelay = Math.max(1000, wickedDelay - 500); }, 60000); }
+function stopWicked() { clearInterval(wickedTimer); wickedTimer = null; }
 function getCurrentDelay() {
+  if (timedMode) return 30000; // large fallback — tap drives flow
   if (isWicked() && running) return wickedDelay;
   const val = parseInt(document.getElementById('delay-sel').value);
   return isNaN(val) ? 5000 : val;
+}
+
+/* ── Card tap handler (timed mode) ── */
+function onCardTap() {
+  if (!running || !timedMode) return;
+  if (!waitingForTap) return;
+  const elapsed = Date.now() - questionStartTime;
+  waitingForTap = false;
+  clearAllTimers();
+  stopCurrentAudio();
+
+  // Log timing
+  const card = deck[idx];
+  const key = cardKey(card);
+  addTiming(key, elapsed);
+  sessionTimings.push({ key, ms: elapsed, pos: card.pos, v: card.v, s: card.s, qtype: card.qtype });
+
+  // Show flash
+  const flash = document.getElementById('reaction-flash');
+  flash.textContent = (elapsed / 1000).toFixed(2) + 's';
+  flash.classList.add('show');
+  setTimeout(() => flash.classList.remove('show'), 800);
+
+  // Flip card
+  playFlipSound();
+  document.getElementById('card-scene').classList.add('flipped');
+
+  // Play answer then move on
+  playAnswer(card, () => {
+    if (!running) return;
+    t4 = setTimeout(() => {
+      if (!running) return;
+      idx++;
+      if (idx >= deck.length) { round++; deck = buildDeck(getRange()); idx = 0; }
+      showCard();
+    }, 1500);
+  });
 }
 
 /* ── Playback ── */
@@ -1070,44 +1226,45 @@ function showCard() {
   clearAllTimers();
   const mySession = sessionId;
   const card = deck[idx];
-  const delay = getCurrentDelay();
-  const answerGap = 1500;
   const scene = document.getElementById('card-scene');
 
-  // Unflip back to question side
   scene.classList.remove('flipped');
 
-  // Swap content at midpoint of unflip (card is edge-on, invisible)
   t1 = setTimeout(() => {
     if (!running || sessionId !== mySession) return;
-    renderFront(card);
-    renderBack(card);
-    updateProgress();
+    renderFront(card); renderBack(card); updateProgress();
   }, 325);
 
-  // Once unflip completes, play question audio
   t2 = setTimeout(() => {
     if (!running || sessionId !== mySession) return;
     playQuestion(card, () => {
       if (!running || sessionId !== mySession) return;
-      animateBar(delay);
-      // After thinking delay, flip to answer
-      t3 = setTimeout(() => {
-        if (!running || sessionId !== mySession) return;
-        playFlipSound();
-        scene.classList.add('flipped');
-        playAnswer(card, () => {
+
+      if (timedMode) {
+        // Start reaction timer — wait for tap
+        questionStartTime = Date.now();
+        waitingForTap = true;
+        // Visual pulse on bar to show it's listening
+        animateBar(30000);
+      } else {
+        const delay = getCurrentDelay();
+        animateBar(delay);
+        t3 = setTimeout(() => {
           if (!running || sessionId !== mySession) return;
-          animateBar(answerGap);
-          // After answer gap, move to next card
-          t4 = setTimeout(() => {
+          playFlipSound();
+          scene.classList.add('flipped');
+          playAnswer(card, () => {
             if (!running || sessionId !== mySession) return;
-            idx++;
-            if (idx >= deck.length) { round++; deck = buildDeck(getRange()); idx = 0; }
-            showCard();
-          }, answerGap);
-        });
-      }, delay);
+            animateBar(1500);
+            t4 = setTimeout(() => {
+              if (!running || sessionId !== mySession) return;
+              idx++;
+              if (idx >= deck.length) { round++; deck = buildDeck(getRange()); idx = 0; }
+              showCard();
+            }, 1500);
+          });
+        }, delay);
+      }
     });
   }, 680);
 }
@@ -1117,11 +1274,16 @@ function togglePlay() { if (running) stopPlay(); else startPlay(); }
 function startPlay() {
   running = true; sessionId++;
   deck = buildDeck(getRange()); idx = 0; round = 1;
+  sessionTimings = [];
+  // Snapshot current averages for "most improved" calc
+  prevCardAvgs = {};
+  STACK.forEach(c => { const avg = getCardAvg(cardKey(c)); if (avg !== null) prevCardAvgs[cardKey(c)] = avg; });
+
   document.getElementById('play-btn').classList.add('running');
   document.getElementById('play-icon').innerHTML = '<rect x="3" y="2" width="4" height="12" rx="1" fill="currentColor"/><rect x="9" y="2" width="4" height="12" rx="1" fill="currentColor"/>';
   document.getElementById('play-label').textContent = 'Stop';
   document.getElementById('session-dot').classList.add('active');
-  if (isWicked()) startWicked();
+  if (!timedMode && isWicked()) startWicked();
   sessionStart = Date.now(); sessionSeconds = 0;
   sessionTimer = setInterval(tickSession, 1000);
   showCard();
@@ -1129,18 +1291,27 @@ function startPlay() {
 
 function stopPlay() {
   running = false; sessionId++;
-  clearAllTimers();
-  stopCurrentAudio(); stopBar();
-  if (isWicked()) stopWicked();
+  waitingForTap = false;
+  clearAllTimers(); stopCurrentAudio(); stopBar();
+  if (!timedMode && isWicked()) stopWicked();
   clearInterval(sessionTimer);
   document.getElementById('play-btn').classList.remove('running');
   document.getElementById('play-icon').innerHTML = '<polygon points="4,2 14,8 4,14" fill="currentColor"/>';
   document.getElementById('play-label').textContent = 'Start';
   document.getElementById('session-dot').classList.remove('active');
-  if (sessionStart) {
-    const secs = Math.floor((Date.now() - sessionStart) / 1000);
-    if (secs > 5) saveSession(secs);
+
+  const secs = sessionStart ? Math.floor((Date.now() - sessionStart) / 1000) : 0;
+  const hasTimings = sessionTimings.length > 0;
+
+  if (secs > 5) {
+    if (hasTimings) {
+      saveTimedSession(secs);
+      showStatsModal(secs);
+    } else {
+      saveSession(secs);
+    }
   }
+
   sessionStart = null; sessionSeconds = 0;
   document.getElementById('session-time').textContent = '0:00';
   resetFaces(); idx = 0; round = 1; updateProgress();
@@ -1153,19 +1324,332 @@ function tickSession() {
 }
 
 function formatTime(s) { return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
-
 function todayKey() {
   const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function fmtMs(ms) { return (ms/1000).toFixed(2) + 's'; }
+
+/* ══════════════════════════════════════════
+   SESSION STATS MODAL
+══════════════════════════════════════════ */
+function showStatsModal(secs) {
+  if (sessionTimings.length === 0) return;
+
+  const times = sessionTimings.map(t => t.ms);
+  const avg = times.reduce((a,b) => a+b, 0) / times.length;
+  const minT = Math.min(...times);
+  const maxT = Math.max(...times);
+  const fastCard = sessionTimings.find(t => t.ms === minT);
+  const slowCard = sessionTimings.find(t => t.ms === maxT);
+  const target = appSettings.target;
+
+  const underTarget = times.filter(t => t <= target).length;
+  const overTarget  = times.filter(t => t > target).length;
+
+  // Graduated cards: was slow before, now under threshold
+  const graduated = [];
+  STACK.forEach(c => {
+    const key = cardKey(c);
+    const prevAvg = prevCardAvgs[key];
+    const newAvg = getCardAvg(key);
+    if (prevAvg !== null && prevAvg !== undefined && prevAvg > appSettings.threshold && newAvg !== null && newAvg <= appSettings.threshold) {
+      graduated.push(c);
+    }
+  });
+
+  // Most improved
+  let mostImproved = null, biggestDrop = 0;
+  STACK.forEach(c => {
+    const key = cardKey(c);
+    const prev = prevCardAvgs[key];
+    const curr = getCardAvg(key);
+    if (prev && curr && (prev - curr) > biggestDrop) {
+      biggestDrop = prev - curr;
+      mostImproved = c;
+    }
+  });
+
+  // Still slow
+  const stillSlow = getSlowCards();
+
+  // PB check — load from localStorage
+  let pbAvg = parseFloat(localStorage.getItem('mnemonica_pb_avg') || '99999');
+  const isPB = avg < pbAvg;
+  if (isPB) localStorage.setItem('mnemonica_pb_avg', avg.toString());
+
+  const content = document.getElementById('stats-modal-content');
+  let html = '';
+
+  if (isPB) {
+    html += `<div class="pb-banner">🏆 Personal Best — Fastest Average Ever! 🏆</div>`;
+  }
+
+  html += `<div class="stats-grid">
+    <div class="stats-tile highlight${isPB?' pb':''}">
+      <div class="stats-tile-label">Session Average</div>
+      <div class="stats-tile-val">${fmtMs(avg)}</div>
+      <div class="stats-tile-sub">Target: ${fmtMs(target)}</div>
+    </div>
+    <div class="stats-tile">
+      <div class="stats-tile-label">Cards Drilled</div>
+      <div class="stats-tile-val">${times.length}</div>
+      <div class="stats-tile-sub">${formatTime(secs)} total</div>
+    </div>
+    <div class="stats-tile">
+      <div class="stats-tile-label">Under Target</div>
+      <div class="stats-tile-val good">${underTarget}</div>
+      <div class="stats-tile-sub">${Math.round(underTarget/times.length*100)}%</div>
+    </div>
+    <div class="stats-tile">
+      <div class="stats-tile-label">Over Target</div>
+      <div class="stats-tile-val${overTarget > 0 ? ' bad' : ' good'}">${overTarget}</div>
+      <div class="stats-tile-sub">${Math.round(overTarget/times.length*100)}%</div>
+    </div>
+    <div class="stats-tile">
+      <div class="stats-tile-label">Fastest</div>
+      <div class="stats-tile-val good">${fmtMs(minT)}</div>
+      <div class="stats-tile-sub">${fastCard ? VNAMES[fastCard.v]+' of '+SNAMES[fastCard.s] : ''}</div>
+    </div>
+    <div class="stats-tile">
+      <div class="stats-tile-label">Slowest</div>
+      <div class="stats-tile-val bad">${fmtMs(maxT)}</div>
+      <div class="stats-tile-sub">${slowCard ? VNAMES[slowCard.v]+' of '+SNAMES[slowCard.s] : ''}</div>
+    </div>`;
+
+  if (mostImproved) {
+    html += `<div class="stats-tile full-width">
+      <div class="stats-tile-label">Most Improved This Session</div>
+      <div class="stats-tile-val">${VNAMES[mostImproved.v]} of ${SNAMES[mostImproved.s]}</div>
+      <div class="stats-tile-sub">↓ ${fmtMs(biggestDrop)} faster on rolling avg</div>
+    </div>`;
+  }
+
+  html += `</div>`;
+
+  if (graduated.length > 0) {
+    html += `<div class="stats-section-title">🎓 Graduated Cards</div>
+    <div class="graduated-list">
+      ${graduated.map(c => `<div class="grad-badge">${c.v}${c.s}</div>`).join('')}
+    </div>`;
+  }
+
+  if (stillSlow.length > 0) {
+    html += `<div class="stats-section-title">Still Slow (>${fmtMs(appSettings.threshold)})</div>
+    <div class="slow-card-list">
+      ${stillSlow.map(c => `<div class="slow-badge">${c.v}${c.s} · ${fmtMs(getCardAvg(cardKey(c)))}</div>`).join('')}
+    </div>`;
+  }
+
+  // Charts
+  html += `<div class="stats-section-title">This Session — Reaction Times</div>
+  <div class="chart-wrap"><canvas id="bar-chart" height="160"></canvas></div>`;
+
+  html += `<div class="stats-section-title">Progress Over Timed Sessions</div>
+  <div class="chart-wrap"><canvas id="line-chart" height="140"></canvas></div>`;
+
+  content.innerHTML = html;
+
+  // Draw charts after DOM update
+  requestAnimationFrame(() => {
+    drawBarChart();
+    drawLineChart();
+  });
+
+  document.getElementById('stats-modal').classList.add('open');
 }
 
-/* ── Practice log ── */
+function closeStatsModal() {
+  document.getElementById('stats-modal').classList.remove('open');
+}
+
+/* ── Mini canvas charts (no library) ── */
+function drawBarChart() {
+  const canvas = document.getElementById('bar-chart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 340;
+  const H = 160;
+  canvas.width = W; canvas.height = H;
+
+  const data = sessionTimings;
+  if (!data.length) return;
+
+  const target = appSettings.target;
+  const maxVal = Math.max(...data.map(d => d.ms), target * 1.5);
+  const pad = { top: 10, right: 10, bottom: 24, left: 38 };
+  const chartW = W - pad.left - pad.right;
+  const chartH = H - pad.top - pad.bottom;
+  const barW = Math.max(2, chartW / data.length - 1);
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Target line
+  const targetY = pad.top + chartH - (target / maxVal) * chartH;
+  ctx.strokeStyle = 'rgba(201,168,76,0.4)';
+  ctx.setLineDash([4, 4]);
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad.left, targetY); ctx.lineTo(W - pad.right, targetY); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Bars
+  data.forEach((d, i) => {
+    const x = pad.left + i * (chartW / data.length);
+    const barH = (d.ms / maxVal) * chartH;
+    const y = pad.top + chartH - barH;
+    ctx.fillStyle = d.ms <= target ? 'rgba(46,204,113,0.7)' : 'rgba(231,76,60,0.7)';
+    ctx.fillRect(x, y, barW, barH);
+  });
+
+  // Y axis labels
+  ctx.fillStyle = 'rgba(201,168,76,0.5)';
+  ctx.font = '9px Crimson Text, serif';
+  ctx.textAlign = 'right';
+  [0, 0.25, 0.5, 0.75, 1].forEach(frac => {
+    const val = maxVal * frac;
+    const y = pad.top + chartH - frac * chartH;
+    ctx.fillText((val/1000).toFixed(1)+'s', pad.left - 4, y + 3);
+  });
+
+  // X label
+  ctx.fillStyle = 'rgba(201,168,76,0.3)';
+  ctx.font = '9px Crimson Text, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Cards this session →', pad.left + chartW/2, H - 4);
+}
+
+async function drawLineChart() {
+  const canvas = document.getElementById('line-chart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 340;
+  const H = 140;
+  canvas.width = W; canvas.height = H;
+
+  // Load history from bin
+  let data = null;
+  try { data = await loadBin(); } catch(e) {}
+  if (!data) return;
+
+  const sessions = Object.entries(data)
+    .filter(([k, v]) => /^\d{4}-\d{2}-\d{2}/.test(k) && v.avg_ms)
+    .map(([k, v]) => ({ date: k, avg: v.avg_ms }))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-20);
+
+  if (sessions.length < 2) {
+    ctx.fillStyle = 'rgba(201,168,76,0.3)';
+    ctx.font = '11px Crimson Text, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('More timed sessions needed for trend', W/2, H/2);
+    return;
+  }
+
+  const pad = { top: 10, right: 14, bottom: 24, left: 42 };
+  const chartW = W - pad.left - pad.right;
+  const chartH = H - pad.top - pad.bottom;
+  const vals = sessions.map(s => s.avg);
+  const minV = Math.min(...vals) * 0.85;
+  const maxV = Math.max(...vals) * 1.1;
+
+  const xOf = i => pad.left + (i / (sessions.length - 1)) * chartW;
+  const yOf = v => pad.top + chartH - ((v - minV) / (maxV - minV)) * chartH;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Target line
+  const targetY = yOf(appSettings.target);
+  if (targetY >= pad.top && targetY <= pad.top + chartH) {
+    ctx.strokeStyle = 'rgba(201,168,76,0.35)';
+    ctx.setLineDash([4,4]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad.left, targetY); ctx.lineTo(W - pad.right, targetY); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Line
+  ctx.strokeStyle = 'rgba(201,168,76,0.8)';
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  sessions.forEach((s, i) => { i === 0 ? ctx.moveTo(xOf(i), yOf(s.avg)) : ctx.lineTo(xOf(i), yOf(s.avg)); });
+  ctx.stroke();
+
+  // Fill under line
+  ctx.fillStyle = 'rgba(201,168,76,0.08)';
+  ctx.beginPath();
+  sessions.forEach((s, i) => { i === 0 ? ctx.moveTo(xOf(i), yOf(s.avg)) : ctx.lineTo(xOf(i), yOf(s.avg)); });
+  ctx.lineTo(xOf(sessions.length-1), pad.top + chartH);
+  ctx.lineTo(xOf(0), pad.top + chartH);
+  ctx.closePath(); ctx.fill();
+
+  // Dots
+  sessions.forEach((s, i) => {
+    ctx.beginPath();
+    ctx.arc(xOf(i), yOf(s.avg), 3, 0, Math.PI*2);
+    ctx.fillStyle = s.avg <= appSettings.target ? 'rgba(46,204,113,0.9)' : 'rgba(201,168,76,0.9)';
+    ctx.fill();
+  });
+
+  // Y axis
+  ctx.fillStyle = 'rgba(201,168,76,0.5)';
+  ctx.font = '9px Crimson Text, serif';
+  ctx.textAlign = 'right';
+  const steps = 4;
+  for (let i = 0; i <= steps; i++) {
+    const v = minV + (maxV - minV) * (i / steps);
+    const y = yOf(v);
+    ctx.fillText((v/1000).toFixed(1)+'s', pad.left - 4, y + 3);
+  }
+
+  // X label
+  ctx.fillStyle = 'rgba(201,168,76,0.3)';
+  ctx.font = '9px Crimson Text, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Recent timed sessions →', pad.left + chartW/2, H - 4);
+}
+
+/* ══════════════════════════════════════════
+   PRACTICE LOG
+══════════════════════════════════════════ */
+async function saveTimedSession(secs) {
+  syncStatus('saving...');
+  try {
+    let data = await loadBin() || {};
+    const key = todayKey();
+    if (!data[key]) data[key] = { total: 0, sessions: 0 };
+    data[key].total += secs;
+    data[key].sessions += 1;
+
+    // Save avg_ms for today's timed sessions (rolling update)
+    const times = sessionTimings.map(t => t.ms);
+    const avg = times.reduce((a,b) => a+b, 0) / times.length;
+    if (!data[key].avg_ms) {
+      data[key].avg_ms = avg;
+      data[key].timed_sessions = 1;
+    } else {
+      const n = data[key].timed_sessions || 1;
+      data[key].avg_ms = (data[key].avg_ms * n + avg) / (n + 1);
+      data[key].timed_sessions = n + 1;
+    }
+
+    // Save card timings
+    if (!data.timing) data.timing = {};
+    Object.entries(cardTimings).forEach(([k, arr]) => {
+      data.timing[k] = arr;
+    });
+
+    await saveBin(data);
+    syncStatus('saved ✓'); setTimeout(() => syncStatus(''), 3000);
+    renderLog(data);
+  } catch(e) { syncStatus('sync failed'); }
+}
+
 async function saveSession(secs) {
   syncStatus('saving...');
   try {
     let data = await loadBin() || {};
     const key = todayKey();
-    if (!data[key]) data[key] = {total: 0, sessions: 0};
+    if (!data[key]) data[key] = { total: 0, sessions: 0 };
     data[key].total += secs; data[key].sessions += 1;
     await saveBin(data);
     syncStatus('saved ✓'); setTimeout(() => syncStatus(''), 3000);
@@ -1181,27 +1665,53 @@ async function renderLog(data) {
     document.getElementById('alltime-time').textContent = '0:00';
     return;
   }
+
+  // Load card timings if present
+  if (data.timing) {
+    Object.entries(data.timing).forEach(([k, arr]) => {
+      cardTimings[k] = arr;
+    });
+  }
+
   let allTime = 0, todayTotal = 0;
   const today = todayKey();
   const entries = Object.entries(data)
     .filter(([k]) => /^\d{4}-\d{2}-\d{2}$/.test(k))
-    .map(([k, v]) => ({date: k, ...v}))
+    .map(([k, v]) => ({ date: k, ...v }))
     .sort((a, b) => b.date.localeCompare(a.date));
   entries.forEach(e => { allTime += e.total; if (e.date === today) todayTotal = e.total; });
   document.getElementById('today-time').textContent = formatTime(todayTotal);
   document.getElementById('alltime-time').textContent = formatTime(allTime);
+
   const grid = document.getElementById('log-grid');
   if (!entries.length) { grid.innerHTML = '<div class="no-log">No sessions yet — start drilling!</div>'; return; }
+
+  const target = appSettings.target;
   grid.innerHTML = entries.slice(0, 14).map(e => {
     const d = new Date(e.date + 'T00:00:00');
-    const label = d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
-    return `<div class="log-card"><div class="log-date">${label}</div><div class="log-time">${formatTime(e.total)}</div><div class="log-sessions">${e.sessions} session${e.sessions !== 1 ? 's' : ''}</div></div>`;
+    const label = d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+    let timingHtml = '';
+    let colorClass = '';
+    if (e.avg_ms) {
+      const avgSec = (e.avg_ms / 1000).toFixed(2);
+      const good = e.avg_ms <= target;
+      const mixed = !good && e.avg_ms <= target * 1.5;
+      colorClass = good ? 'good' : mixed ? 'mixed' : 'slow';
+      timingHtml = `<div class="log-avg" style="color:${good?'#2ecc71':mixed?'#f39c12':'#e87070'}">avg ${avgSec}s</div>`;
+    }
+    return `<div class="log-card has-timing ${colorClass}">
+      <div class="log-date">${label}</div>
+      <div class="log-time">${formatTime(e.total)}</div>
+      ${timingHtml}
+      <div class="log-sessions">${e.sessions} session${e.sessions !== 1 ? 's' : ''}</div>
+    </div>`;
   }).join('');
 }
 
 async function clearLog() {
   if (!confirm('Clear all practice history?')) return;
-  try { await saveBin({}); renderLog({}); } catch(e) { syncStatus('clear failed'); }
+  try { await saveBin({}); cardTimings = {}; localStorage.removeItem('mnemonica_pb_avg'); renderLog({}); }
+  catch(e) { syncStatus('clear failed'); }
 }
 
 /* ── Settings persistence ── */
@@ -1210,7 +1720,8 @@ function saveSettings() {
     modes: [...activeModes],
     from: document.getElementById('range-from').value,
     to: document.getElementById('range-to').value,
-    delay: document.getElementById('delay-sel').value
+    delay: document.getElementById('delay-sel').value,
+    timed: timedMode
   };
   localStorage.setItem('mnemonica_settings', JSON.stringify(s));
 }
@@ -1220,21 +1731,28 @@ function loadSettings() {
     const s = JSON.parse(localStorage.getItem('mnemonica_settings'));
     if (!s) return;
     if (s.from) document.getElementById('range-from').value = s.from;
-    if (s.to) document.getElementById('range-to').value = s.to;
+    if (s.to)   document.getElementById('range-to').value   = s.to;
     if (s.delay) document.getElementById('delay-sel').value = s.delay;
+    if (s.timed) {
+      timedMode = true;
+      document.getElementById('timed-switch').classList.add('on');
+      document.getElementById('timed-label-text').textContent = 'Timed Mode';
+      document.getElementById('delay-group').style.display = 'none';
+      document.getElementById('delay-divider').style.display = 'none';
+      document.getElementById('card-scene').classList.add('timed-mode');
+    }
     if (s.modes && Array.isArray(s.modes) && s.modes.length > 0) {
       activeModes = new Set(s.modes);
-      const btnMap = {'pos-to-card':'ptc','card-to-pos':'ctp','card-before':'bef','card-after':'aft'};
-      ['ptc','ctp','bef','aft'].forEach(id => document.getElementById('btn-' + id).classList.remove('active'));
-      activeModes.forEach(m => {
-        if (btnMap[m]) document.getElementById('btn-' + btnMap[m]).classList.add('active');
-      });
+      const btnMap = {'pos-to-card':'ptc','card-to-pos':'ctp','card-before':'bef','card-after':'aft','worst-cards':'worst'};
+      ['ptc','ctp','bef','aft','worst'].forEach(id => document.getElementById('btn-' + id).classList.remove('active'));
+      activeModes.forEach(m => { if (btnMap[m]) document.getElementById('btn-' + btnMap[m]).classList.add('active'); });
     }
   } catch(e) {}
 }
 
 /* ── Init ── */
 loadSettings();
+loadAppSettings();
 deck = buildDeck(getRange());
 updateProgress();
 reloadPhrases();
