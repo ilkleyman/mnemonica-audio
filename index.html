@@ -270,6 +270,45 @@ body {
 .sync-status { font-size: 11px; color: var(--gold-dark); margin-left: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; font-family: 'Crimson Text', serif; }
 .no-log { font-size: 14px; color: var(--cream-dim); font-style: italic; }
 
+/* ── Answer buttons (timed mode) ── */
+.answer-btns {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin: -0.25rem 0 1rem;
+}
+
+.ans-btn {
+  flex: 1;
+  max-width: 160px;
+  padding: 12px 0;
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  border-radius: 8px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+
+.ans-correct {
+  background: rgba(46,204,113,0.12);
+  border-color: rgba(46,204,113,0.5);
+  color: #2ecc71;
+}
+.ans-correct:hover { background: rgba(46,204,113,0.25); border-color: #2ecc71; }
+.ans-correct:active { transform: scale(0.97); }
+
+.ans-wrong {
+  background: rgba(231,76,60,0.12);
+  border-color: rgba(231,76,60,0.5);
+  color: #e87070;
+}
+.ans-wrong:hover { background: rgba(231,76,60,0.25); border-color: #e74c3c; }
+.ans-wrong:active { transform: scale(0.97); }
+
 /* ── Version footer ── */
 .version-footer { text-align: center; margin-top: 2rem; font-family: 'Cinzel', serif; font-size: 10px; color: rgba(201,168,76,0.25); letter-spacing: 0.1em; }
 
@@ -583,6 +622,12 @@ canvas { display: block; width: 100% !important; }
 
   <div class="timer-wrap"><div class="timer-bar" id="timer-bar"></div></div>
 
+  <!-- Correct / Wrong buttons (timed mode only, shown after flip) -->
+  <div class="answer-btns" id="answer-btns" style="display:none">
+    <button class="ans-btn ans-wrong" onclick="answerWrong()">✗ Wrong</button>
+    <button class="ans-btn ans-correct" onclick="answerCorrect()">✓ Correct</button>
+  </div>
+
   <div class="progress-row">
     <div class="progress" id="progress">Ready</div>
     <div class="round-badge" id="round-badge">Round 1</div>
@@ -604,7 +649,7 @@ canvas { display: block; width: 100% !important; }
     <div class="log-grid" id="log-grid"><div class="no-log">No sessions yet — start drilling!</div></div>
   </div>
 
-  <div class="version-footer">V5 · 13th May 2026</div>
+  <div class="version-footer">V6 · 13th May 2026</div>
 
 </div>
 
@@ -673,6 +718,7 @@ canvas { display: block; width: 100% !important; }
     </div>
 
     <button class="modal-save" onclick="saveSettingsModal()">Save Settings</button>
+    <button class="modal-save" onclick="resetTimingData()" style="margin-top:8px;background:rgba(231,76,60,0.08);border-color:rgba(231,76,60,0.5);color:#e87070;">Reset All Timing Data</button>
   </div>
 </div>
 
@@ -1044,6 +1090,25 @@ function resetFaces() {
     <div class="card-back-svg">${CARD_BACK_SVG}</div>
     <div class="idle-content"><div class="idle-text">Press<br>Start<br>to Begin</div></div>`;
   document.getElementById('back-face').innerHTML = '';
+  hideAnswerButtons();
+}
+
+// Show back-of-card pattern as placeholder while preamble audio plays
+function renderBackPattern() {
+  const f = document.getElementById('front-face');
+  f.className = 'card-face card-front card-idle';
+  f.innerHTML = `<div class="card-back-svg">${CARD_BACK_SVG}</div>`;
+}
+
+function hideAnswerButtons() {
+  const el = document.getElementById('answer-btns');
+  if (el) el.style.display = 'none';
+}
+
+function showAnswerButtons(card, elapsed) {
+  const el = document.getElementById('answer-btns');
+  el.style.display = 'flex';
+  el.dataset.pending = JSON.stringify({ card: { v: card.v, s: card.s, pos: card.pos, qtype: card.qtype }, elapsed });
 }
 
 function updateProgress() {
@@ -1133,20 +1198,52 @@ function stopBar() {
 }
 
 /* ── Audio chain ── */
-function playQuestion(card, onDone) {
+// playQuestion now takes an optional onReveal callback fired just before the
+// final "answer" audio segment (the position number or card name).
+// This is used in timed mode to reveal the card content and start the timer
+// at the exact moment the answer is spoken.
+function playQuestion(card, onReveal, onDone) {
   const isFirst = idx === 0 && round === 1;
   const prefix = isFirst
     ? (introPhrases.length ? rand(introPhrases) : null)
     : (linkPhrases.length ? rand(linkPhrases) : null);
   const cardFile = AUDIO_BASE + 'card_' + card.v + card.s + '.mp3';
+
+  // Helper: play preamble segments, call onReveal, then play final segment, then onDone
+  function playWithReveal(preamble, finalUrl) {
+    const pre = preamble.filter(Boolean);
+    function playFinal() {
+      if (onReveal) onReveal();
+      if (!finalUrl) { if (onDone) onDone(); return; }
+      const a = new Audio(finalUrl);
+      currentAudio = a;
+      a.onended = () => { if (onDone) onDone(); };
+      a.onerror = () => { if (onDone) onDone(); };
+      a.play().catch(() => { if (onDone) onDone(); });
+    }
+    if (!pre.length) { playFinal(); return; }
+    // Play preamble chain, then final
+    let i = 0, active = true;
+    function nextPre() {
+      if (!running || !active) return;
+      if (i >= pre.length) { playFinal(); return; }
+      const a = new Audio(pre[i++]);
+      currentAudio = a;
+      a.onended = nextPre;
+      a.onerror = () => { setTimeout(nextPre, 100); };
+      a.play().catch(() => { setTimeout(nextPre, 100); });
+    }
+    nextPre();
+  }
+
   if (card.qtype === 'pos-to-card') {
-    playChain([prefix, rand(cardPhrases.length ? cardPhrases : [null]), AUDIO_BASE + 'pos_' + card.pos + '.mp3'], onDone);
+    playWithReveal([prefix, rand(cardPhrases.length ? cardPhrases : [null])], AUDIO_BASE + 'pos_' + card.pos + '.mp3');
   } else if (card.qtype === 'card-before') {
-    playChain([prefix, rand(beforePhrases.length ? beforePhrases : [null]), cardFile], onDone);
+    playWithReveal([prefix, rand(beforePhrases.length ? beforePhrases : [null])], cardFile);
   } else if (card.qtype === 'card-after') {
-    playChain([prefix, rand(afterPhrases.length ? afterPhrases : [null]), cardFile], onDone);
+    playWithReveal([prefix, rand(afterPhrases.length ? afterPhrases : [null])], cardFile);
   } else {
-    playChain([prefix, rand(posPhrases.length ? posPhrases : [null]), cardFile], onDone);
+    playWithReveal([prefix, rand(posPhrases.length ? posPhrases : [null])], cardFile);
   }
 }
 
@@ -1187,32 +1284,56 @@ function onCardTap() {
   clearAllTimers();
   stopCurrentAudio();
 
-  // Log timing
-  const card = deck[idx];
-  const key = cardKey(card);
-  addTiming(key, elapsed);
-  sessionTimings.push({ key, ms: elapsed, pos: card.pos, v: card.v, s: card.s, qtype: card.qtype });
-
-  // Show flash
+  // Show reaction time flash
   const flash = document.getElementById('reaction-flash');
   flash.textContent = (elapsed / 1000).toFixed(2) + 's';
   flash.classList.add('show');
-  setTimeout(() => flash.classList.remove('show'), 800);
+  setTimeout(() => flash.classList.remove('show'), 1000);
 
-  // Flip card
+  // Flip to answer
   playFlipSound();
   document.getElementById('card-scene').classList.add('flipped');
 
-  // Play answer then move on
+  // Play answer audio then show Correct / Wrong buttons
+  const card = deck[idx];
   playAnswer(card, () => {
     if (!running) return;
-    t4 = setTimeout(() => {
-      if (!running) return;
-      idx++;
-      if (idx >= deck.length) { round++; deck = buildDeck(getRange()); idx = 0; }
-      showCard();
-    }, 1500);
+    showAnswerButtons(card, elapsed);
   });
+}
+
+function answerCorrect() {
+  const el = document.getElementById('answer-btns');
+  const { card, elapsed } = JSON.parse(el.dataset.pending || '{}');
+  hideAnswerButtons();
+  if (!card || !running) return;
+  const key = cardKey(card);
+  addTiming(key, elapsed);
+  sessionTimings.push({ key, ms: elapsed, pos: card.pos, v: card.v, s: card.s, qtype: card.qtype });
+  advanceCard();
+}
+
+function answerWrong() {
+  const el = document.getElementById('answer-btns');
+  const { card } = JSON.parse(el.dataset.pending || '{}');
+  hideAnswerButtons();
+  if (!card || !running) return;
+  // Add a high synthetic time so card lands in worst pile immediately
+  const key = cardKey(card);
+  addTiming(key, 9999);
+  sessionTimings.push({ key, ms: 9999, pos: card.pos, v: card.v, s: card.s, qtype: card.qtype, wrong: true });
+  advanceCard();
+}
+
+function advanceCard() {
+  if (!running) return;
+  animateBar(800);
+  t4 = setTimeout(() => {
+    if (!running) return;
+    idx++;
+    if (idx >= deck.length) { round++; deck = buildDeck(getRange()); idx = 0; }
+    showCard();
+  }, 800);
 }
 
 /* ── Playback ── */
@@ -1224,29 +1345,37 @@ function clearAllTimers() {
 function showCard() {
   if (!running) return;
   clearAllTimers();
+  hideAnswerButtons();
   const mySession = sessionId;
   const card = deck[idx];
   const scene = document.getElementById('card-scene');
 
   scene.classList.remove('flipped');
 
+  // Show back-of-card pattern while preamble audio plays
   t1 = setTimeout(() => {
     if (!running || sessionId !== mySession) return;
-    renderFront(card); renderBack(card); updateProgress();
+    renderBackPattern();
+    renderBack(card);
+    updateProgress();
   }, 325);
 
   t2 = setTimeout(() => {
     if (!running || sessionId !== mySession) return;
-    playQuestion(card, () => {
-      if (!running || sessionId !== mySession) return;
 
+    const onReveal = () => {
+      if (!running || sessionId !== mySession) return;
+      renderFront(card);
       if (timedMode) {
-        // Start reaction timer — wait for tap
         questionStartTime = Date.now();
         waitingForTap = true;
-        // Visual pulse on bar to show it's listening
         animateBar(30000);
-      } else {
+      }
+    };
+
+    const onDone = () => {
+      if (!running || sessionId !== mySession) return;
+      if (!timedMode) {
         const delay = getCurrentDelay();
         animateBar(delay);
         t3 = setTimeout(() => {
@@ -1265,7 +1394,9 @@ function showCard() {
           });
         }, delay);
       }
-    });
+    };
+
+    playQuestion(card, onReveal, onDone);
   }, 680);
 }
 
@@ -1712,6 +1843,19 @@ async function clearLog() {
   if (!confirm('Clear all practice history?')) return;
   try { await saveBin({}); cardTimings = {}; localStorage.removeItem('mnemonica_pb_avg'); renderLog({}); }
   catch(e) { syncStatus('clear failed'); }
+}
+
+async function resetTimingData() {
+  if (!confirm('Reset all card timing data? This will clear per-card averages and your personal best. Practice time history is kept.')) return;
+  try {
+    let data = await loadBin() || {};
+    delete data.timing;
+    await saveBin(data);
+    cardTimings = {};
+    localStorage.removeItem('mnemonica_pb_avg');
+    closeSettings();
+    syncStatus('timing reset ✓'); setTimeout(() => syncStatus(''), 3000);
+  } catch(e) { syncStatus('reset failed'); }
 }
 
 /* ── Settings persistence ── */
