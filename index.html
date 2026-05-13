@@ -327,6 +327,70 @@ body {
 }
 .card-ans-wrong:hover { background: rgba(231,76,60,0.95); }
 
+/* ── Rank badge ── */
+.rank-badge {
+  display: flex; align-items: center; gap: 4px;
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  background: rgba(201,168,76,0.1);
+  border: 1px solid var(--gold-dark);
+  border-radius: 5px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.rank-badge:hover { background: rgba(201,168,76,0.2); border-color: var(--gold); }
+
+/* Scores modal extras */
+.scores-rank-banner {
+  text-align: center;
+  padding: 14px;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  border: 1px solid;
+}
+.scores-section { margin-bottom: 1rem; }
+.scores-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-family: 'Cinzel', serif;
+}
+.scores-table th {
+  color: var(--gold-dark);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 6px;
+  border-bottom: 1px solid rgba(201,168,76,0.2);
+  text-align: left;
+}
+.scores-table td {
+  padding: 5px 6px;
+  color: var(--cream);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 11px;
+}
+.scores-table tr:last-child td { border-bottom: none; }
+.scores-table .good { color: #2ecc71; }
+.scores-table .bad  { color: #e87070; }
+.scores-table .amber { color: #f39c12; }
+.rank-progress-bar {
+  height: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+  margin: 8px 0 4px;
+  overflow: hidden;
+}
+.rank-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+
 /* ── Version footer ── */
 .version-footer { text-align: center; margin-top: 2rem; font-family: 'Cinzel', serif; font-size: 13px; color: rgba(201,168,76,0.35); letter-spacing: 0.1em; }
 
@@ -575,7 +639,13 @@ canvas { display: block; width: 100% !important; }
           <div class="toggle-switch" id="timed-switch"></div>
           <span id="timed-label-text">Auto Mode</span>
         </label>
-        <button class="settings-cog" onclick="openSettings()" title="Settings">⚙</button>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="rank-badge" id="rank-badge" onclick="openScores()" title="View Scores">
+            <span id="rank-arrow"></span><span id="rank-title">Novice</span>
+          </div>
+          <button class="settings-cog" onclick="openScores()" title="Scores">📊</button>
+          <button class="settings-cog" onclick="openSettings()" title="Settings">⚙</button>
+        </div>
       </div>
 
       <div class="mode-toggle">
@@ -671,8 +741,20 @@ canvas { display: block; width: 100% !important; }
     <div class="log-grid" id="log-grid"><div class="no-log">No sessions yet — start drilling!</div></div>
   </div>
 
-  <div class="version-footer">V15 · 13th May 2026</div>
+  <div class="version-footer">V16 · 13th May 2026</div>
 
+</div>
+
+<!-- Scores Modal -->
+<div class="modal-overlay" id="scores-modal">
+  <div class="stats-modal-box">
+    <div class="modal-title">
+      Scores &amp; Progress
+      <button class="modal-close" onclick="closeScores()">✕</button>
+    </div>
+    <div id="scores-modal-content"><div style="color:var(--cream-dim);font-style:italic;text-align:center;padding:2rem">Loading...</div></div>
+    <button class="stats-close-btn" onclick="closeScores()">Close</button>
+  </div>
 </div>
 
 <!-- Settings Modal -->
@@ -1066,18 +1148,15 @@ function buildDeck(cards) {
 
   if (modes.includes('worst-cards')) {
     const slow = getSlowCards();
-    if (slow.length === 0) {
-      // fallback — no slow cards yet, drill everything
-      const nonWorst = modes.filter(m => m !== 'worst-cards');
-      const fallbackModes = nonWorst.length > 0 ? nonWorst : ['pos-to-card'];
-      return shuffle(cards.flatMap(c => fallbackModes.map(m => ({...c, qtype: m}))));
-    }
-    // Only use non-worst modes alongside worst cards
     const otherModes = modes.filter(m => m !== 'worst-cards');
     const qtypes = otherModes.length > 0 ? otherModes : ['pos-to-card'];
-    return shuffle(slow.flatMap(c => qtypes.map(m => ({...c, qtype: m}))));
+    const sourceCards = slow.length > 0 ? slow : cards;
+    // Assign a random qtype from active modes to each card, then shuffle
+    return shuffle(sourceCards.map(c => ({...c, qtype: qtypes[Math.floor(Math.random() * qtypes.length)]})));
   }
 
+  // For each card, create one entry per active mode, then shuffle the whole lot
+  // This gives true random interleaving of all mode types
   let all = [];
   modes.forEach(m => {
     let filtered = cards;
@@ -1530,6 +1609,8 @@ function stopPlay() {
   const secs = sessionStart ? Math.floor((Date.now() - sessionStart) / 1000) : 0;
   const hasTimings = sessionTimings.length > 0;
 
+  if (hasTimings) lastSessionData = { timings: [...sessionTimings], secs };
+
   if (secs > 5) {
     if (hasTimings) {
       saveTimedSession(secs);
@@ -1538,6 +1619,8 @@ function stopPlay() {
       saveSession(secs);
     }
   }
+
+  updateRankBadge();
 
   sessionStart = null; sessionSeconds = 0;
   document.getElementById('session-time').textContent = '0:00';
@@ -1990,13 +2073,236 @@ function loadSettings() {
   } catch(e) {}
 }
 
+/* ══════════════════════════════════════════
+   RANKING SYSTEM
+══════════════════════════════════════════ */
+const RANKS = [
+  { title: 'Grandmaster',  emoji: '👑', minPct: 95, color: '#f1c40f', bg: 'rgba(241,196,15,0.12)', border: 'rgba(241,196,15,0.5)' },
+  { title: 'Master',       emoji: '🏆', minPct: 85, color: '#e8c97a', bg: 'rgba(232,201,122,0.1)',  border: 'rgba(232,201,122,0.4)' },
+  { title: 'Expert',       emoji: '⭐', minPct: 70, color: '#2ecc71', bg: 'rgba(46,204,113,0.1)',   border: 'rgba(46,204,113,0.4)' },
+  { title: 'Adept',        emoji: '🎯', minPct: 55, color: '#3498db', bg: 'rgba(52,152,219,0.1)',   border: 'rgba(52,152,219,0.4)' },
+  { title: 'Apprentice',   emoji: '🃏', minPct: 40, color: '#9b59b6', bg: 'rgba(155,89,182,0.1)',   border: 'rgba(155,89,182,0.4)' },
+  { title: 'Student',      emoji: '📖', minPct: 25, color: '#e67e22', bg: 'rgba(230,126,34,0.1)',   border: 'rgba(230,126,34,0.4)' },
+  { title: 'Novice',       emoji: '🌱', minPct: 0,  color: '#95a5a6', bg: 'rgba(149,165,166,0.1)',  border: 'rgba(149,165,166,0.3)' },
+];
+
+function getRankInfo() {
+  // % of cards with rolling avg under target
+  const target = appSettings.target;
+  const timedCards = STACK.filter(c => {
+    const arr = cardTimings[cardKey(c)];
+    return arr && arr.filter(t => t < 9000).length > 0;
+  });
+  if (timedCards.length === 0) return { rank: RANKS[RANKS.length-1], pct: 0, underTarget: 0, total: 52 };
+  const underTarget = timedCards.filter(c => {
+    const avg = getCardAvg(cardKey(c));
+    return avg !== null && avg <= target;
+  }).length;
+  // Score based on fraction of ALL 52 cards under target (not just drilled)
+  const pct = Math.round((underTarget / 52) * 100);
+  const rank = RANKS.find(r => pct >= r.minPct) || RANKS[RANKS.length-1];
+  return { rank, pct, underTarget, total: 52, timedCount: timedCards.length };
+}
+
+function updateRankBadge() {
+  const { rank, pct } = getRankInfo();
+  const prevRankTitle = localStorage.getItem('mnemonica_rank') || 'Novice';
+  const prevRankIdx = RANKS.findIndex(r => r.title === prevRankTitle);
+  const currRankIdx = RANKS.findIndex(r => r.title === rank.title);
+  let arrow = '';
+  if (currRankIdx < prevRankIdx) arrow = '▲';       // lower index = higher rank
+  else if (currRankIdx > prevRankIdx) arrow = '▼';
+  localStorage.setItem('mnemonica_rank', rank.title);
+  const badge = document.getElementById('rank-badge');
+  const arrowEl = document.getElementById('rank-arrow');
+  const titleEl = document.getElementById('rank-title');
+  if (badge) {
+    badge.style.color = rank.color;
+    badge.style.borderColor = rank.border;
+    badge.style.background = rank.bg;
+  }
+  if (arrowEl) arrowEl.textContent = arrow ? arrow + ' ' : '';
+  if (titleEl) titleEl.textContent = rank.emoji + ' ' + rank.title;
+}
+
+/* ── Last session store ── */
+let lastSessionData = null; // saved when session ends
+
+function openScores() {
+  const el = document.getElementById('scores-modal');
+  el.classList.add('open');
+  renderScoresModal();
+}
+function closeScores() {
+  document.getElementById('scores-modal').classList.remove('open');
+}
+
+async function renderScoresModal() {
+  const content = document.getElementById('scores-modal-content');
+  const { rank, pct, underTarget, total, timedCount } = getRankInfo();
+  const target = appSettings.target;
+  const nextRank = RANKS[RANKS.findIndex(r => r.title === rank.title) - 1];
+
+  let html = '';
+
+  // ── Rank banner ──
+  html += `<div class="scores-rank-banner" style="background:${rank.bg};border-color:${rank.border};color:${rank.color}">
+    <div style="font-family:'Cinzel',serif;font-size:22px;font-weight:700;letter-spacing:0.05em">${rank.emoji} ${rank.title}</div>
+    <div style="font-size:12px;margin-top:4px;opacity:0.85">${underTarget} of ${total} cards under ${fmtMs(target)}</div>
+    <div class="rank-progress-bar"><div class="rank-progress-fill" style="width:${pct}%;background:${rank.color}"></div></div>
+    <div style="font-size:10px;opacity:0.7">${pct}% mastery at current target</div>
+    ${nextRank ? `<div style="font-size:10px;margin-top:4px;opacity:0.6">Next rank: ${nextRank.emoji} ${nextRank.title} — need ${nextRank.minPct}%</div>` : '<div style="font-size:10px;margin-top:4px;color:#f1c40f">Maximum rank achieved! 🎉</div>'}
+  </div>`;
+
+  // ── Last session ──
+  if (lastSessionData) {
+    const ls = lastSessionData;
+    const validTimes = ls.timings.filter(t => t.ms < 9000);
+    if (validTimes.length > 0) {
+      const avg = validTimes.reduce((a,b) => a+b.ms, 0) / validTimes.length;
+      const best = Math.min(...validTimes.map(t => t.ms));
+      const worst = Math.max(...validTimes.map(t => t.ms));
+      const bestCard = validTimes.find(t => t.ms === best);
+      const worstCard = validTimes.find(t => t.ms === worst);
+      const wrongCount = ls.timings.filter(t => t.wrong).length;
+      html += `<div class="stats-section-title">Last Session</div>
+      <div class="stats-grid" style="margin-bottom:0.75rem">
+        <div class="stats-tile"><div class="stats-tile-label">Average</div><div class="stats-tile-val">${fmtMs(avg)}</div></div>
+        <div class="stats-tile"><div class="stats-tile-label">Cards</div><div class="stats-tile-val">${validTimes.length}</div></div>
+        <div class="stats-tile"><div class="stats-tile-label">Fastest</div><div class="stats-tile-val good">${fmtMs(best)}</div><div class="stats-tile-sub">${bestCard ? bestCard.v+bestCard.s : ''}</div></div>
+        <div class="stats-tile"><div class="stats-tile-label">Slowest</div><div class="stats-tile-val bad">${fmtMs(worst)}</div><div class="stats-tile-sub">${worstCard ? worstCard.v+worstCard.s : ''}</div></div>
+        ${wrongCount > 0 ? `<div class="stats-tile full-width"><div class="stats-tile-label">Wrong answers</div><div class="stats-tile-val bad">${wrongCount}</div></div>` : ''}
+      </div>`;
+    }
+  } else {
+    html += `<div class="stats-section-title">Last Session</div>
+    <div style="font-size:13px;color:var(--cream-dim);font-style:italic;margin-bottom:1rem">No timed session this visit yet</div>`;
+  }
+
+  // ── Per-card averages ──
+  const cardData = STACK.map(c => {
+    const key = cardKey(c);
+    const arr = (cardTimings[key] || []).filter(t => t < 9000);
+    const avg = arr.length > 0 ? arr.reduce((a,b) => a+b,0)/arr.length : null;
+    const wrong = (cardTimings[key] || []).filter(t => t >= 9000).length;
+    return { ...c, avg, wrong, attempts: arr.length };
+  }).filter(c => c.avg !== null || c.wrong > 0);
+
+  if (cardData.length > 0) {
+    // Sort by avg speed
+    const sorted = [...cardData].filter(c => c.avg !== null).sort((a,b) => a.avg - b.avg);
+    const wrongCards = cardData.filter(c => c.wrong > 0);
+
+    html += `<div class="stats-section-title">Cards by Speed</div>
+    <table class="scores-table">
+      <tr><th>Card</th><th>Avg</th><th>Attempts</th><th>Status</th></tr>
+      ${sorted.map(c => {
+        const good = c.avg <= target;
+        const mid  = !good && c.avg <= appSettings.threshold;
+        const cls  = good ? 'good' : mid ? 'amber' : 'bad';
+        const status = good ? '✓' : mid ? '~' : '✗';
+        return `<tr>
+          <td>${VNAMES[c.v]} of ${SNAMES[c.s]}</td>
+          <td class="${cls}">${fmtMs(c.avg)}</td>
+          <td>${c.attempts}</td>
+          <td class="${cls}">${status}</td>
+        </tr>`;
+      }).join('')}
+    </table>`;
+
+    if (wrongCards.length > 0) {
+      html += `<div class="stats-section-title" style="margin-top:1rem">Wrong Answers Recorded</div>
+      <div class="slow-card-list">
+        ${wrongCards.map(c => `<div class="slow-badge">${c.v}${c.s} ×${c.wrong}</div>`).join('')}
+      </div>`;
+    }
+
+    // Overall stats
+    const allAvgs = sorted.map(c => c.avg);
+    const overallAvg = allAvgs.reduce((a,b)=>a+b,0)/allAvgs.length;
+    const fastestCard = sorted[0];
+    const slowestCard = sorted[sorted.length-1];
+
+    html += `<div class="stats-section-title" style="margin-top:1rem">Overall Stats</div>
+    <div class="stats-grid">
+      <div class="stats-tile"><div class="stats-tile-label">Cards Tracked</div><div class="stats-tile-val">${sorted.length}</div></div>
+      <div class="stats-tile"><div class="stats-tile-label">Overall Avg</div><div class="stats-tile-val">${fmtMs(overallAvg)}</div></div>
+      <div class="stats-tile"><div class="stats-tile-label">Best Card</div><div class="stats-tile-val good" style="font-size:14px">${fastestCard.v} of ${SNAMES[fastestCard.s]}</div><div class="stats-tile-sub">${fmtMs(fastestCard.avg)}</div></div>
+      <div class="stats-tile"><div class="stats-tile-label">Needs Work</div><div class="stats-tile-val bad" style="font-size:14px">${slowestCard.v} of ${SNAMES[slowestCard.s]}</div><div class="stats-tile-sub">${fmtMs(slowestCard.avg)}</div></div>
+    </div>`;
+
+    // Session trend from bin
+    html += `<div class="stats-section-title">Session Average Trend</div>
+    <div class="chart-wrap"><canvas id="scores-line-chart" height="140"></canvas></div>`;
+
+  } else {
+    html += `<div style="font-size:13px;color:var(--cream-dim);font-style:italic;margin:1rem 0">No card timing data yet — complete a timed session to see per-card stats.</div>`;
+  }
+
+  content.innerHTML = html;
+  requestAnimationFrame(() => drawScoresLineChart());
+}
+
+async function drawScoresLineChart() {
+  const canvas = document.getElementById('scores-line-chart');
+  if (!canvas) return;
+  const W = canvas.offsetWidth || 340;
+  const H = 140;
+  canvas.width = W; canvas.height = H;
+  let data = null;
+  try { data = await loadBin(); } catch(e) {}
+  if (!data) return;
+  const sessions = Object.entries(data)
+    .filter(([k,v]) => /^\d{4}-\d{2}-\d{2}/.test(k) && v.avg_ms)
+    .map(([k,v]) => ({ date: k, avg: v.avg_ms }))
+    .sort((a,b) => a.date.localeCompare(b.date))
+    .slice(-20);
+  if (sessions.length < 2) {
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = 'rgba(201,168,76,0.3)';
+    ctx.font = '11px Crimson Text,serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('More timed sessions needed for trend', W/2, H/2);
+    return;
+  }
+  const ctx = canvas.getContext('2d');
+  const pad = { top:10, right:14, bottom:24, left:42 };
+  const cW = W-pad.left-pad.right, cH = H-pad.top-pad.bottom;
+  const vals = sessions.map(s=>s.avg);
+  const minV = Math.min(...vals)*0.85, maxV = Math.max(...vals)*1.1;
+  const xOf = i => pad.left+(i/(sessions.length-1))*cW;
+  const yOf = v => pad.top+cH-((v-minV)/(maxV-minV))*cH;
+  ctx.clearRect(0,0,W,H);
+  const tY = yOf(appSettings.target);
+  if (tY>=pad.top && tY<=pad.top+cH) {
+    ctx.strokeStyle='rgba(201,168,76,0.35)'; ctx.setLineDash([4,4]); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(pad.left,tY); ctx.lineTo(W-pad.right,tY); ctx.stroke(); ctx.setLineDash([]);
+  }
+  ctx.strokeStyle='rgba(201,168,76,0.8)'; ctx.lineWidth=2; ctx.lineJoin='round';
+  ctx.beginPath();
+  sessions.forEach((s,i)=>{ i===0?ctx.moveTo(xOf(i),yOf(s.avg)):ctx.lineTo(xOf(i),yOf(s.avg)); });
+  ctx.stroke();
+  ctx.fillStyle='rgba(201,168,76,0.08)';
+  ctx.beginPath();
+  sessions.forEach((s,i)=>{ i===0?ctx.moveTo(xOf(i),yOf(s.avg)):ctx.lineTo(xOf(i),yOf(s.avg)); });
+  ctx.lineTo(xOf(sessions.length-1),pad.top+cH); ctx.lineTo(xOf(0),pad.top+cH); ctx.closePath(); ctx.fill();
+  sessions.forEach((s,i)=>{
+    ctx.beginPath(); ctx.arc(xOf(i),yOf(s.avg),3,0,Math.PI*2);
+    ctx.fillStyle=s.avg<=appSettings.target?'rgba(46,204,113,0.9)':'rgba(201,168,76,0.9)'; ctx.fill();
+  });
+  ctx.fillStyle='rgba(201,168,76,0.5)'; ctx.font='9px Crimson Text,serif'; ctx.textAlign='right';
+  for(let i=0;i<=4;i++){const v=minV+(maxV-minV)*(i/4);ctx.fillText((v/1000).toFixed(1)+'s',pad.left-4,yOf(v)+3);}
+  ctx.fillStyle='rgba(201,168,76,0.3)'; ctx.font='9px Crimson Text,serif'; ctx.textAlign='center';
+  ctx.fillText('Recent timed sessions →',pad.left+cW/2,H-4);
+}
+
 /* ── Init ── */
 loadSettings();
 loadAppSettings();
 deck = buildDeck(getRange());
 updateProgress();
 reloadPhrases();
-renderLog();
+renderLog().then(() => updateRankBadge());
 </script>
 </body>
 </html>
