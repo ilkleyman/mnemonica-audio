@@ -30,7 +30,7 @@
   --danger: #e74c3c;
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 body {
   font-family: 'Crimson Text', Georgia, serif;
@@ -208,8 +208,9 @@ body {
 .idle-suit { font-size: 52px; opacity: 0.12; color: var(--gold); }
 
 /* Timed mode tap overlay */
+.card-scene { -webkit-tap-highlight-color: transparent; }
 .card-scene.timed-mode { cursor: pointer; }
-.card-scene.timed-mode .card-inner:hover { filter: brightness(1.05); }
+.card-scene.timed-mode .card-inner:hover { filter: drop-shadow(0 20px 40px rgba(0,0,0,0.7)); }
 
 /* Reaction time flash */
 .reaction-flash {
@@ -647,7 +648,7 @@ canvas { display: block; width: 100% !important; }
     <div class="log-grid" id="log-grid"><div class="no-log">No sessions yet — start drilling!</div></div>
   </div>
 
-  <div class="version-footer">V13 · 13th May 2026</div>
+  <div class="version-footer">V14 · 13th May 2026</div>
 
 </div>
 
