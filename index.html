@@ -181,26 +181,19 @@ body {
 .corner-val { font-family: 'Cinzel', serif; font-size: 17px; font-weight: 700; line-height: 1; }
 .corner-suit { font-size: 14px; line-height: 1; }
 
-.card-back { border: 2px solid var(--gold); transform: rotateY(180deg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 1.5rem; background: var(--card-bg); }
-.card-back.card-back-blue { background: #1a2a4a; border-color: var(--gold); }
+.card-back { border: 2px solid var(--gold-dark); transform: rotateY(180deg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 1.5rem; background: var(--card-bg); }
 .card-back-svg { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 14px; overflow: hidden; pointer-events: none; }
 .card-back .corner-val { font-family: 'Cinzel', serif; font-size: 16px; font-weight: 700; line-height: 1; color: var(--black); position: relative; z-index: 1; }
-.card-back.card-back-blue .corner-val { color: var(--gold-light); }
 .card-back .corner-suit { font-size: 13px; line-height: 1; position: relative; z-index: 1; }
-
 .suit-symbol, .corner-suit { font-family: 'Segoe UI Symbol', 'Apple Symbols', 'Arial Unicode MS', Georgia, serif; font-style: normal; font-variant-emoji: text; -webkit-font-feature-settings: "liga" off; text-rendering: geometricPrecision; }
 .suit-symbol { font-size: 76px; line-height: 1; text-shadow: 0 2px 8px rgba(0,0,0,0.15); }
 .card-label { font-family: 'Cinzel', serif; font-size: 15px; font-weight: 600; letter-spacing: 0.03em; }
 .card-sublabel { font-size: 12px; color: #888; font-style: italic; text-align: center; }
 .position-number { font-family: 'Cinzel', serif; font-size: 82px; font-weight: 700; line-height: 1; color: var(--black); text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 .phase-label { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: #aaa; margin-bottom: 2px; text-align: center; }
-.card-back .phase-label { color: var(--gold-dark); }
-.card-back .card-label { color: var(--cream); }
-.card-back .position-number { color: var(--gold-light); text-shadow: 0 0 20px rgba(201,168,76,0.3); }
-.card-back .card-sublabel { color: var(--cream-dim); }
 .red { color: var(--red); }
-.card-back .red { color: #e87070; }
-.card-back .corner-suit.red, .card-back .corner-val.red { color: #e87070; }
+.card-back .red { color: var(--red); }
+.card-back .corner-suit.red, .card-back .corner-val.red { color: var(--red); }
 
 .idle-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .idle-text { font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(201,168,76,0.5); text-align: center; line-height: 2; }
@@ -654,7 +647,7 @@ canvas { display: block; width: 100% !important; }
     <div class="log-grid" id="log-grid"><div class="no-log">No sessions yet — start drilling!</div></div>
   </div>
 
-  <div class="version-footer">V9 · 13th May 2026</div>
+  <div class="version-footer">V10 · 13th May 2026</div>
 
 </div>
 
@@ -1164,27 +1157,35 @@ function renderFront(card) {
 
 function renderBack(card) {
   const b = document.getElementById('back-face');
+  b.className = 'card-face card-back';
+
   let ansCard = card;
   if (card.qtype === 'card-before') ansCard = STACK.find(c => c.pos === card.pos - 1) || card;
   if (card.qtype === 'card-after')  ansCard = STACK.find(c => c.pos === card.pos + 1) || card;
-  const color = cardColor(ansCard.s);
-  if (card.qtype === 'pos-to-card' || card.qtype === 'card-before' || card.qtype === 'card-after') {
-    b.className = 'card-face card-back';
+
+  if (card.qtype === 'card-to-pos') {
+    // Answer is a position number — show big number on cream
+    b.innerHTML = `
+      <div style="text-align:center">
+        <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#aaa;margin-bottom:4px">Position</div>
+        <div style="font-family:'Cinzel',serif;font-size:82px;font-weight:700;line-height:1;color:#1a1a2e">${card.pos}</div>
+      </div>`;
+  } else {
+    // Answer is a card (pos-to-card, card-before, card-after)
+    const color = cardColor(ansCard.s);
     const suit_lg = suitSymbol(ansCard.s, color, 72);
     const suit_sm = suitSymbol(ansCard.s, color, 15);
     b.innerHTML = `
-      <div class="corner-tl"><div class="corner-val" style="color:${color}">${ansCard.v}</div><div>${suit_sm}</div></div>
-      <div class="corner-br"><div class="corner-val" style="color:${color}">${ansCard.v}</div><div>${suit_sm}</div></div>
+      <div class="corner-tl">
+        <div class="corner-val" style="color:${color}">${ansCard.v}</div>
+        <div>${suit_sm}</div>
+      </div>
+      <div class="corner-br">
+        <div class="corner-val" style="color:${color}">${ansCard.v}</div>
+        <div>${suit_sm}</div>
+      </div>
       ${suit_lg}
       <div class="card-label" style="color:${color}">${VNAMES[ansCard.v]} of ${SNAMES[ansCard.s]}</div>`;
-  } else {
-    // card-to-pos: show the position number on a cream card face
-    b.className = 'card-face card-back';
-    b.innerHTML = `
-      <div style="text-align:center">
-        <div class="phase-label" style="color:#aaa">Position</div>
-        <div class="position-number" style="color:var(--black)">${card.pos}</div>
-      </div>`;
   }
 }
 
@@ -1299,12 +1300,12 @@ function onCardTap() {
   playFlipSound();
   document.getElementById('card-scene').classList.add('flipped');
 
-  // Play answer audio then show Correct / Wrong buttons
+  // Show buttons immediately when card flips — no waiting for audio
   const card = deck[idx];
-  playAnswer(card, () => {
-    if (!running) return;
-    showAnswerButtons(card, elapsed);
-  });
+  showAnswerButtons(card, elapsed);
+
+  // Play answer audio in parallel
+  playAnswer(card, null);
 }
 
 function answerCorrect() {
