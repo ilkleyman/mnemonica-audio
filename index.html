@@ -170,12 +170,12 @@ body {
 .round-badge { font-size: 11px; font-family: 'Cinzel', serif; color: var(--gold-dark); background: rgba(201,168,76,0.1); border: 1px solid var(--gold-dark); border-radius: 999px; padding: 3px 10px; letter-spacing: 0.05em; }
 
 /* ── Card ── */
-.card-scene { display: flex; justify-content: center; perspective: 1200px; margin-bottom: 1rem; filter: drop-shadow(0 20px 40px rgba(0,0,0,0.7)); position: relative; }
-.card-inner { position: relative; width: 220px; height: 320px; transform-style: preserve-3d; transition: transform 0.65s cubic-bezier(0.4,0,0.2,1); }
+.card-scene { display: flex; justify-content: center; perspective: 1200px; margin-bottom: 1rem; position: relative; }
+.card-inner { position: relative; width: 220px; height: 320px; transform-style: preserve-3d; transition: transform 0.65s cubic-bezier(0.4,0,0.2,1); background: var(--card-bg); border-radius: 16px; filter: drop-shadow(0 20px 40px rgba(0,0,0,0.7)); }
 .card-scene.flipped .card-inner { transform: rotateY(180deg); }
 .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 16px; overflow: hidden; }
 
-.card-front { background: var(--card-bg); border: 2px solid var(--gold-dark); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 1rem; }
+.card-front { background: var(--card-bg); border: 2px solid var(--gold-dark); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 1rem; transition: background 0.15s; }
 .corner-tl { position: absolute; top: 10px; left: 12px; display: flex; flex-direction: column; align-items: center; line-height: 1; }
 .corner-br { position: absolute; bottom: 10px; right: 12px; display: flex; flex-direction: column; align-items: center; line-height: 1; transform: rotate(180deg); }
 .corner-val { font-family: 'Cinzel', serif; font-size: 17px; font-weight: 700; line-height: 1; }
@@ -647,7 +647,7 @@ canvas { display: block; width: 100% !important; }
     <div class="log-grid" id="log-grid"><div class="no-log">No sessions yet — start drilling!</div></div>
   </div>
 
-  <div class="version-footer">V12 · 13th May 2026</div>
+  <div class="version-footer">V13 · 13th May 2026</div>
 
 </div>
 
