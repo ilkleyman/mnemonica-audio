@@ -647,7 +647,7 @@ canvas { display: block; width: 100% !important; }
     <div class="log-grid" id="log-grid"><div class="no-log">No sessions yet — start drilling!</div></div>
   </div>
 
-  <div class="version-footer">V11 · 13th May 2026</div>
+  <div class="version-footer">V12 · 13th May 2026</div>
 
 </div>
 
@@ -1189,6 +1189,33 @@ function renderBack(card) {
   }
 }
 
+// Write the answer directly into the front face — no flip needed
+function renderAnswer(card) {
+  const f = document.getElementById('front-face');
+  let ansCard = card;
+  if (card.qtype === 'card-before') ansCard = STACK.find(c => c.pos === card.pos - 1) || card;
+  if (card.qtype === 'card-after')  ansCard = STACK.find(c => c.pos === card.pos + 1) || card;
+
+  if (card.qtype === 'card-to-pos') {
+    f.className = 'card-face card-front card-cream';
+    f.innerHTML = `
+      <div style="text-align:center">
+        <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#aaa;margin-bottom:4px">Position</div>
+        <div style="font-family:'Cinzel',serif;font-size:82px;font-weight:700;line-height:1;color:#1a1a2e">${card.pos}</div>
+      </div>`;
+  } else {
+    const color = cardColor(ansCard.s);
+    const suit_lg = suitSymbol(ansCard.s, color, 72);
+    const suit_sm = suitSymbol(ansCard.s, color, 15);
+    f.className = 'card-face card-front card-cream';
+    f.innerHTML = `
+      <div class="corner-tl"><div class="corner-val" style="color:${color}">${ansCard.v}</div><div>${suit_sm}</div></div>
+      <div class="corner-br"><div class="corner-val" style="color:${color}">${ansCard.v}</div><div>${suit_sm}</div></div>
+      ${suit_lg}
+      <div class="card-label" style="color:${color}">${VNAMES[ansCard.v]} of ${SNAMES[ansCard.s]}</div>`;
+  }
+}
+
 /* ── Timer bar ── */
 function animateBar(ms) {
   const bar = document.getElementById('timer-bar');
@@ -1296,13 +1323,10 @@ function onCardTap() {
   flash.classList.add('show');
   setTimeout(() => flash.classList.remove('show'), 1000);
 
-  // Make absolutely sure back-face has the correct answer content before flipping
+  // Replace question content with answer directly on the front face — no flip
   const card = deck[idx];
-  renderBack(card);
-
-  // Flip to answer
   playFlipSound();
-  document.getElementById('card-scene').classList.add('flipped');
+  renderAnswer(card);
 
   // Show buttons immediately
   showAnswerButtons(card, elapsed);
@@ -1359,6 +1383,7 @@ function showCard() {
   const card = deck[idx];
   const scene = document.getElementById('card-scene');
 
+  // Always show front face — remove any flip from previous card
   scene.classList.remove('flipped');
 
   // Show back-of-card pattern while preamble audio plays
