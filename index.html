@@ -1060,12 +1060,14 @@ function preloadAudio(url) {
   const a = new Audio(); a.preload = 'auto'; a.src = url; a.load(); audioCache[url] = true;
 }
 function tryLoad(url) {
-  return new Promise(resolve => {
+  const load = new Promise(resolve => {
     const a = new Audio();
     a.oncanplaythrough = () => resolve(true);
     a.onerror = () => resolve(false);
     a.src = url; a.load();
   });
+  const timeout = new Promise(resolve => setTimeout(() => resolve(false), 3000));
+  return Promise.race([load, timeout]);
 }
 async function reloadPhrases() {
   cardPhrases = []; posPhrases = []; linkPhrases = []; introPhrases = []; beforePhrases = []; afterPhrases = [];
