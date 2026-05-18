@@ -327,6 +327,61 @@ body {
 }
 .card-ans-wrong:hover { background: rgba(231,76,60,0.95); }
 
+/* ── Sprint Mode chip + countdown ring ── */
+.sprint-chip {
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--gold-dark);
+  color: var(--cream-dim);
+  padding: 4px 9px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 8px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.sprint-chip:hover { color: var(--cream); border-color: var(--gold); }
+.sprint-chip.on {
+  background: rgba(231,76,60,0.22);
+  border-color: rgba(231,76,60,0.7);
+  color: #ffb3a8;
+  box-shadow: 0 0 10px rgba(231,76,60,0.25);
+}
+
+.sprint-ring {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+  height: 320px;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 15;
+  transition: opacity 0.15s;
+}
+.sprint-ring.active { opacity: 1; }
+.sprint-ring rect {
+  fill: none;
+  stroke: #2ecc71;
+  stroke-width: 4;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 0;
+  filter: drop-shadow(0 0 4px rgba(0,0,0,0.5));
+}
+.sprint-ring.active rect {
+  animation: sprint-drain var(--sprint-duration, 5s) linear forwards;
+}
+@keyframes sprint-drain {
+  0%   { stroke-dashoffset: 0;   stroke: #2ecc71; }
+  55%  { stroke-dashoffset: 55;  stroke: #2ecc71; }
+  75%  { stroke-dashoffset: 75;  stroke: #f39c12; }
+  90%  { stroke-dashoffset: 90;  stroke: #e74c3c; }
+  100% { stroke-dashoffset: 100; stroke: #e74c3c; }
+}
+
 /* ── Rank badge ── */
 .rank-badge {
   display: flex; align-items: center; gap: 4px;
@@ -635,10 +690,13 @@ canvas { display: block; width: 100% !important; }
   <div class="controls">
     <div class="mode-group">
       <div class="top-row">
-        <label class="timed-toggle" id="timed-label" onclick="toggleTimedMode()">
-          <div class="toggle-switch" id="timed-switch"></div>
-          <span id="timed-label-text">Auto Mode</span>
-        </label>
+        <div style="display:flex;align-items:center">
+          <label class="timed-toggle" id="timed-label" onclick="toggleTimedMode()">
+            <div class="toggle-switch" id="timed-switch"></div>
+            <span id="timed-label-text">Auto Mode</span>
+          </label>
+          <button class="sprint-chip" id="sprint-chip" onclick="toggleSprintMode()" title="Sprint Mode — countdown ring around card, auto-wrong if time runs out">⚡ Sprint</button>
+        </div>
         <div style="display:flex;align-items:center;gap:6px">
           <div class="rank-badge" id="rank-badge" onclick="openScores()" title="View Scores">
             <span id="rank-arrow"></span><span id="rank-title">Novice</span>
@@ -705,6 +763,9 @@ canvas { display: block; width: 100% !important; }
       </div>
       <div class="card-face card-back" id="back-face"></div>
     </div>
+    <svg class="sprint-ring" id="sprint-ring" viewBox="0 0 220 320" aria-hidden="true">
+      <rect x="2" y="2" width="216" height="316" rx="16" pathLength="100"/>
+    </svg>
     <div class="reaction-flash" id="reaction-flash" style="display:none"></div>
     <!-- Timing strip shown above answer buttons -->
     <div class="card-timing-strip" id="timing-strip" style="display:none">
@@ -741,7 +802,7 @@ canvas { display: block; width: 100% !important; }
     <div class="log-grid" id="log-grid"><div class="no-log">No sessions yet — start drilling!</div></div>
   </div>
 
-  <div class="version-footer">V16 · 13th May 2026</div>
+  <div class="version-footer">V19 · 18th May 2026 · Sprint Mode</div>
 
 </div>
 
@@ -821,6 +882,23 @@ canvas { display: block; width: 100% !important; }
       </div>
     </div>
 
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Sprint time</div>
+        <div class="setting-sublabel">Time before auto-wrong in Sprint mode</div>
+      </div>
+      <div class="setting-control">
+        <select id="set-sprint-time">
+          <option value="2000">2s</option>
+          <option value="3000">3s</option>
+          <option value="5000" selected>5s</option>
+          <option value="7000">7s</option>
+          <option value="10000">10s</option>
+          <option value="15000">15s</option>
+        </select>
+      </div>
+    </div>
+
     <button class="modal-save" onclick="saveSettingsModal()">Save Settings</button>
     <button class="modal-save" onclick="resetTimingData()" style="margin-top:8px;background:rgba(231,76,60,0.08);border-color:rgba(231,76,60,0.5);color:#e87070;">Reset All Timing Data</button>
   </div>
@@ -841,6 +919,12 @@ canvas { display: block; width: 100% !important; }
 <script>
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
+  let swReloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (swReloaded) return;
+    swReloaded = true;
+    window.location.reload();
+  });
 }
 
 const AUDIO_BASE = 'https://ilkleyman.github.io/mnemonica-audio/audio/';
@@ -922,7 +1006,8 @@ let appSettings = {
   threshold: 2000,
   worstCount: 0,
   target: 1500,
-  window: 10
+  window: 10,
+  sprintTime: 5000
 };
 
 function loadAppSettings() {
@@ -934,6 +1019,7 @@ function loadAppSettings() {
   document.getElementById('set-worst-count').value = appSettings.worstCount;
   document.getElementById('set-target').value = appSettings.target;
   document.getElementById('set-window').value = appSettings.window;
+  document.getElementById('set-sprint-time').value = appSettings.sprintTime;
 }
 
 function saveSettingsModal() {
@@ -941,6 +1027,7 @@ function saveSettingsModal() {
   appSettings.worstCount = parseInt(document.getElementById('set-worst-count').value) || 0;
   appSettings.target = parseInt(document.getElementById('set-target').value);
   appSettings.window = parseInt(document.getElementById('set-window').value);
+  appSettings.sprintTime = parseInt(document.getElementById('set-sprint-time').value);
   localStorage.setItem('mnemonica_app_settings', JSON.stringify(appSettings));
   closeSettings();
 }
@@ -952,6 +1039,7 @@ function closeSettings() { document.getElementById('settings-modal').classList.r
    TIMED MODE
 ══════════════════════════════════════════ */
 let timedMode = false;
+let sprintMode = false;
 
 function toggleTimedMode() {
   timedMode = !timedMode;
@@ -963,8 +1051,84 @@ function toggleTimedMode() {
   dd.style.display = timedMode ? 'none' : '';
   const scene = document.getElementById('card-scene');
   scene.classList.toggle('timed-mode', timedMode);
+  // Sprint requires Timed — turn it off when Timed turns off
+  if (!timedMode && sprintMode) {
+    sprintMode = false;
+    document.getElementById('sprint-chip').classList.remove('on');
+  }
   if (running) stopPlay();
   saveSettings();
+}
+
+function toggleSprintMode() {
+  sprintMode = !sprintMode;
+  document.getElementById('sprint-chip').classList.toggle('on', sprintMode);
+  // Sprint implies Timed — flip Timed on if needed
+  if (sprintMode && !timedMode) toggleTimedMode();
+  if (running) stopPlay();
+  else stopSprintRing();
+  saveSettings();
+}
+
+function startSprintRing() {
+  const ring = document.getElementById('sprint-ring');
+  if (!ring) return;
+  const rect = ring.querySelector('rect');
+  ring.style.setProperty('--sprint-duration', (appSettings.sprintTime / 1000) + 's');
+  // Restart animation by toggling class with a reflow
+  ring.classList.remove('active');
+  rect.style.animation = 'none';
+  void rect.offsetWidth;
+  rect.style.animation = '';
+  ring.classList.add('active');
+  rect.onanimationend = () => {
+    if (running && waitingForTap && sprintMode && timedMode) {
+      autoSprintTimeout();
+    }
+  };
+}
+
+function stopSprintRing() {
+  const ring = document.getElementById('sprint-ring');
+  if (!ring) return;
+  const rect = ring.querySelector('rect');
+  ring.classList.remove('active');
+  rect.onanimationend = null;
+  rect.style.animation = 'none';
+  void rect.offsetWidth;
+  rect.style.animation = '';
+}
+
+function autoSprintTimeout() {
+  if (!running || !waitingForTap) return;
+  waitingForTap = false;
+  stopSprintRing();
+  clearAllTimers();
+  stopCurrentAudio();
+  const card = deck[idx];
+  playFlipSound();
+  renderAnswer(card);
+
+  // Show a "time's up" strip
+  const strip = document.getElementById('timing-strip');
+  const timeEl = document.getElementById('timing-strip-time');
+  const commentEl = document.getElementById('timing-strip-comment');
+  timeEl.textContent = '⏱ Time';
+  timeEl.style.color = '#e74c3c';
+  commentEl.textContent = "Out of time";
+  strip.style.display = 'flex';
+
+  // Log as wrong (matches Wrong button behaviour so card lands in worst pile)
+  const key = cardKey(card);
+  addTiming(key, 9999);
+  sessionTimings.push({ key, ms: 9999, pos: card.pos, v: card.v, s: card.s, qtype: card.qtype, wrong: true, timeout: true });
+
+  // Briefly play the answer so the user learns the card
+  playAnswer(card, null);
+  t4 = setTimeout(() => {
+    hideAnswerButtons();
+    advanceCard();
+  }, 1500);
 }
 
 /* ══════════════════════════════════════════
@@ -1462,6 +1626,7 @@ function onCardTap() {
   if (!waitingForTap) return;
   const elapsed = Date.now() - questionStartTime;
   waitingForTap = false;
+  stopSprintRing();
   clearAllTimers();
   stopCurrentAudio();
 
@@ -1551,6 +1716,7 @@ function showCard() {
         questionStartTime = Date.now();
         waitingForTap = true;
         animateBar(30000);
+        if (sprintMode) startSprintRing();
       } else {
         const delay = getCurrentDelay();
         animateBar(delay);
@@ -1600,6 +1766,7 @@ function startPlay() {
 function stopPlay() {
   running = false; sessionId++;
   waitingForTap = false;
+  stopSprintRing();
   clearAllTimers(); stopCurrentAudio(); stopBar();
   if (!timedMode && isWicked()) stopWicked();
   clearInterval(sessionTimer);
@@ -1613,13 +1780,11 @@ function stopPlay() {
 
   if (hasTimings) lastSessionData = { timings: [...sessionTimings], secs };
 
-  if (secs > 5) {
-    if (hasTimings) {
-      saveTimedSession(secs);
-      showStatsModal(secs);
-    } else {
-      saveSession(secs);
-    }
+  if (hasTimings) {
+    saveTimedSession(secs);
+    showStatsModal(secs);
+  } else if (secs > 5) {
+    saveSession(secs);
   }
 
   updateRankBadge();
@@ -2046,7 +2211,8 @@ function saveSettings() {
     from: document.getElementById('range-from').value,
     to: document.getElementById('range-to').value,
     delay: document.getElementById('delay-sel').value,
-    timed: timedMode
+    timed: timedMode,
+    sprint: sprintMode
   };
   localStorage.setItem('mnemonica_settings', JSON.stringify(s));
 }
@@ -2065,6 +2231,10 @@ function loadSettings() {
       document.getElementById('delay-group').style.display = 'none';
       document.getElementById('delay-divider').style.display = 'none';
       document.getElementById('card-scene').classList.add('timed-mode');
+    }
+    if (s.sprint && s.timed) {
+      sprintMode = true;
+      document.getElementById('sprint-chip').classList.add('on');
     }
     if (s.modes && Array.isArray(s.modes) && s.modes.length > 0) {
       activeModes = new Set(s.modes);
