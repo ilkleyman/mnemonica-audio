@@ -1,4 +1,4 @@
-const CACHE = 'mnemonica-v24';
+const CACHE = 'mnemonica-v25';
 const STATIC = [
   '/mnemonica-audio/',
   '/mnemonica-audio/index.html',
@@ -26,9 +26,12 @@ self.addEventListener('fetch', e => {
         const cached = await cache.match(e.request);
         if (cached) return cached;
         const response = await fetch(e.request);
-        // Await the cache.put so the response only returns once the file is
-        // actually persisted — prevents race with isFullyCached() check.
-        if (response.ok) await cache.put(e.request, response.clone());
+        // Only cache full 200 OK responses. iOS Safari audio uses Range
+        // requests that return 206 Partial Content, which cache.put rejects.
+        // Wrap in try/catch so a cache failure never breaks the response.
+        if (response.status === 200) {
+          try { await cache.put(e.request, response.clone()); } catch(err) {}
+        }
         return response;
       })
     );
