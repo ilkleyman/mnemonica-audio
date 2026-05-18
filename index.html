@@ -817,7 +817,7 @@ canvas { display: block; width: 100% !important; }
     <div class="log-grid" id="log-grid"><div class="no-log">No sessions yet — start drilling!</div></div>
   </div>
 
-  <div class="version-footer">V20 · 18th May 2026 · Smart Review</div>
+  <div class="version-footer">V21 · 18th May 2026 · Offline-First</div>
 
 </div>
 
@@ -1167,6 +1167,7 @@ function addTiming(key, ms) {
   if (cardTimings[key].length > appSettings.window) {
     cardTimings[key] = cardTimings[key].slice(-appSettings.window);
   }
+  saveLocalState();
 }
 
 function getSlowCards() {
@@ -1243,6 +1244,7 @@ function updateFSRS(key, elapsed, isCorrect) {
   f.s = Math.max(0.25, Math.min(100, f.s));
   f.due = fsrsSession + Math.max(1, Math.round(f.s));
   f.last = Date.now();
+  saveLocalState();
 }
 
 function buildSmartReviewDeck(cards) {
@@ -1326,11 +1328,17 @@ function playFlipSound() {
 /* ── JSONBin ── */
 function syncStatus(msg) { document.getElementById('sync-status').textContent = msg; }
 
+function fetchWithTimeout(url, opts, ms) {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
+
 async function loadBin() {
   try {
-    const r = await fetch(`${JSONBIN_API}/${BIN_ID}/latest`, {
+    const r = await fetchWithTimeout(`${JSONBIN_API}/${BIN_ID}/latest`, {
       headers: { 'X-Access-Key': JSONBIN_KEY, 'X-Bin-Meta': 'false' }
-    });
+    }, 5000);
     if (!r.ok) return null;
     const j = await r.json();
     return j.record || j;
@@ -1338,13 +1346,120 @@ async function loadBin() {
 }
 
 async function saveBin(data) {
-  const r = await fetch(`${JSONBIN_API}/${BIN_ID}`, {
+  const r = await fetchWithTimeout(`${JSONBIN_API}/${BIN_ID}`, {
     method: 'PUT',
     headers: { 'X-Access-Key': JSONBIN_KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
-  });
+  }, 5000);
   if (!r.ok) throw new Error('update failed');
 }
+
+/* ══════════════════════════════════════════
+   OFFLINE-FIRST STATE
+   localStorage is the source of truth; JSONBin is best-effort backup.
+══════════════════════════════════════════ */
+let sessionLog = {};   // { '2026-05-18': { total, sessions, avg_ms, timed_sessions }, ... }
+let pendingSync = false;
+const LOCAL_STATE_KEY = 'mnemonica_state_v1';
+
+function saveLocalState() {
+  try {
+    const state = {
+      sessionLog,
+      cardTimings,
+      cardFSRS,
+      fsrsSession,
+      pendingSync,
+      savedAt: Date.now()
+    };
+    localStorage.setItem(LOCAL_STATE_KEY, JSON.stringify(state));
+  } catch(e) {}
+}
+
+function loadLocalState() {
+  try {
+    const raw = localStorage.getItem(LOCAL_STATE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch(e) { return null; }
+}
+
+function adoptCloudData(remote) {
+  const log = {};
+  Object.entries(remote).forEach(([k, v]) => {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(k)) log[k] = v;
+  });
+  sessionLog = log;
+  cardTimings = remote.timing || {};
+  cardFSRS = remote.fsrs || {};
+  fsrsSession = remote.fsrsSession || 0;
+}
+
+function buildCloudPayload() {
+  return {
+    ...sessionLog,
+    timing: cardTimings,
+    fsrs: cardFSRS,
+    fsrsSession,
+    savedAt: Date.now()
+  };
+}
+
+async function pushToCloud() {
+  if (!navigator.onLine) {
+    pendingSync = true;
+    saveLocalState();
+    syncStatus('offline · pending');
+    return;
+  }
+  try {
+    syncStatus('syncing…');
+    await saveBin(buildCloudPayload());
+    pendingSync = false;
+    saveLocalState();
+    syncStatus('saved ✓');
+    setTimeout(() => { if (!pendingSync) syncStatus(''); }, 2000);
+  } catch(e) {
+    pendingSync = true;
+    saveLocalState();
+    syncStatus('offline · pending');
+  }
+}
+
+async function bootstrapData() {
+  const local = loadLocalState();
+  const hasLocal = local && (
+    Object.keys(local.sessionLog || {}).length > 0 ||
+    Object.keys(local.cardTimings || {}).length > 0
+  );
+
+  if (hasLocal) {
+    sessionLog = local.sessionLog || {};
+    cardTimings = local.cardTimings || {};
+    cardFSRS = local.cardFSRS || {};
+    fsrsSession = local.fsrsSession || 0;
+    pendingSync = !!local.pendingSync;
+    renderLog();
+    if (pendingSync) pushToCloud();
+    return;
+  }
+
+  // No local state — fetch from cloud
+  try {
+    syncStatus('loading…');
+    const remote = await loadBin();
+    syncStatus('');
+    if (remote) {
+      adoptCloudData(remote);
+      saveLocalState();
+    }
+  } catch(e) { syncStatus(''); }
+  renderLog();
+}
+
+window.addEventListener('online', () => {
+  if (pendingSync) pushToCloud();
+});
 
 /* ── Audio ── */
 const audioCache = {};
@@ -2237,80 +2352,50 @@ async function drawLineChart() {
 /* ══════════════════════════════════════════
    PRACTICE LOG
 ══════════════════════════════════════════ */
-async function saveTimedSession(secs) {
-  syncStatus('saving...');
-  try {
-    let data = await loadBin() || {};
-    const key = todayKey();
-    if (!data[key]) data[key] = { total: 0, sessions: 0 };
-    data[key].total += secs;
-    data[key].sessions += 1;
+function saveTimedSession(secs) {
+  const key = todayKey();
+  if (!sessionLog[key]) sessionLog[key] = { total: 0, sessions: 0 };
+  sessionLog[key].total += secs;
+  sessionLog[key].sessions += 1;
 
-    // Save avg_ms for today's timed sessions (rolling update)
-    const times = sessionTimings.map(t => t.ms);
-    const avg = times.reduce((a,b) => a+b, 0) / times.length;
-    if (!data[key].avg_ms) {
-      data[key].avg_ms = avg;
-      data[key].timed_sessions = 1;
-    } else {
-      const n = data[key].timed_sessions || 1;
-      data[key].avg_ms = (data[key].avg_ms * n + avg) / (n + 1);
-      data[key].timed_sessions = n + 1;
-    }
+  // Rolling avg_ms for today's timed sessions
+  const times = sessionTimings.map(t => t.ms);
+  const avg = times.reduce((a,b) => a+b, 0) / times.length;
+  if (!sessionLog[key].avg_ms) {
+    sessionLog[key].avg_ms = avg;
+    sessionLog[key].timed_sessions = 1;
+  } else {
+    const n = sessionLog[key].timed_sessions || 1;
+    sessionLog[key].avg_ms = (sessionLog[key].avg_ms * n + avg) / (n + 1);
+    sessionLog[key].timed_sessions = n + 1;
+  }
 
-    // Save card timings
-    if (!data.timing) data.timing = {};
-    Object.entries(cardTimings).forEach(([k, arr]) => {
-      data.timing[k] = arr;
-    });
-
-    // Save FSRS state
-    data.fsrs = cardFSRS;
-    data.fsrsSession = fsrsSession;
-
-    await saveBin(data);
-    syncStatus('saved ✓'); setTimeout(() => syncStatus(''), 3000);
-    renderLog(data);
-  } catch(e) { syncStatus('sync failed'); }
+  saveLocalState();
+  renderLog();
+  pushToCloud();
 }
 
-async function saveSession(secs) {
-  syncStatus('saving...');
-  try {
-    let data = await loadBin() || {};
-    const key = todayKey();
-    if (!data[key]) data[key] = { total: 0, sessions: 0 };
-    data[key].total += secs; data[key].sessions += 1;
-    await saveBin(data);
-    syncStatus('saved ✓'); setTimeout(() => syncStatus(''), 3000);
-    renderLog(data);
-  } catch(e) { syncStatus('sync failed'); }
+function saveSession(secs) {
+  const key = todayKey();
+  if (!sessionLog[key]) sessionLog[key] = { total: 0, sessions: 0 };
+  sessionLog[key].total += secs;
+  sessionLog[key].sessions += 1;
+  saveLocalState();
+  renderLog();
+  pushToCloud();
 }
 
-async function renderLog(data) {
-  if (!data) { syncStatus('loading...'); data = await loadBin(); syncStatus(''); }
-  if (!data) {
+function renderLog() {
+  if (Object.keys(sessionLog).length === 0) {
     document.getElementById('log-grid').innerHTML = '<div class="no-log">No sessions yet — start drilling!</div>';
     document.getElementById('today-time').textContent = '0:00';
     document.getElementById('alltime-time').textContent = '0:00';
     return;
   }
 
-  // Load card timings if present
-  if (data.timing) {
-    Object.entries(data.timing).forEach(([k, arr]) => {
-      cardTimings[k] = arr;
-    });
-  }
-
-  // Load FSRS state if present
-  if (data.fsrs) cardFSRS = data.fsrs;
-  if (typeof data.fsrsSession === 'number') fsrsSession = data.fsrsSession;
-
   let allTime = 0, todayTotal = 0;
   const today = todayKey();
-  const entries = Object.entries(data)
-    .filter(([k]) => /^\d{4}-\d{2}-\d{2}$/.test(k))
+  const entries = Object.entries(sessionLog)
     .map(([k, v]) => ({ date: k, ...v }))
     .sort((a, b) => b.date.localeCompare(a.date));
   entries.forEach(e => { allTime += e.total; if (e.date === today) todayTotal = e.total; });
@@ -2342,43 +2427,36 @@ async function renderLog(data) {
   }).join('');
 }
 
-async function clearLog() {
+function clearLog() {
   if (!confirm('Clear all practice history?')) return;
-  try { await saveBin({}); cardTimings = {}; localStorage.removeItem('mnemonica_pb_avg'); renderLog({}); }
-  catch(e) { syncStatus('clear failed'); }
+  sessionLog = {};
+  cardTimings = {};
+  cardFSRS = {};
+  fsrsSession = 0;
+  localStorage.removeItem('mnemonica_pb_avg');
+  saveLocalState();
+  renderLog();
+  pushToCloud();
 }
 
-async function resetTimingData() {
+function resetTimingData() {
   if (!confirm('Reset all card timing data? This will clear per-card averages, Smart Review schedule, and your personal best. Practice time history is kept.')) return;
-  try {
-    let data = await loadBin() || {};
-    delete data.timing;
-    delete data.fsrs;
-    delete data.fsrsSession;
-    await saveBin(data);
-    cardTimings = {};
-    cardFSRS = {};
-    fsrsSession = 0;
-    localStorage.removeItem('mnemonica_pb_avg');
-    closeSettings();
-    syncStatus('timing reset ✓'); setTimeout(() => syncStatus(''), 3000);
-  } catch(e) { syncStatus('reset failed'); }
+  cardTimings = {};
+  cardFSRS = {};
+  fsrsSession = 0;
+  localStorage.removeItem('mnemonica_pb_avg');
+  saveLocalState();
+  closeSettings();
+  pushToCloud();
 }
 
-async function clearSessionHistoryOnly() {
+function clearSessionHistoryOnly() {
   if (!confirm('Clear practice history (daily session log)? Card timings, Smart Review schedule, and your personal best are kept.')) return;
-  try {
-    let data = await loadBin() || {};
-    // Keep only non-date keys
-    const preserved = {};
-    Object.entries(data).forEach(([k, v]) => {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) preserved[k] = v;
-    });
-    await saveBin(preserved);
-    closeSettings();
-    renderLog(preserved);
-    syncStatus('history cleared ✓'); setTimeout(() => syncStatus(''), 3000);
-  } catch(e) { syncStatus('clear failed'); }
+  sessionLog = {};
+  saveLocalState();
+  closeSettings();
+  renderLog();
+  pushToCloud();
 }
 
 /* ── Settings persistence ── */
@@ -2651,7 +2729,7 @@ loadAppSettings();
 deck = buildDeck(getRange());
 updateProgress();
 reloadPhrases();
-renderLog().then(() => {
+bootstrapData().then(() => {
   updateRankBadge();
   // Rebuild deck now that FSRS data is loaded — and refresh the Smart hint
   if (activeModes.has('smart-review')) {
