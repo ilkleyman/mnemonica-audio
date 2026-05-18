@@ -841,7 +841,7 @@ canvas { display: block; width: 100% !important; }
     <div class="log-grid" id="log-grid"><div class="no-log">No sessions yet — start drilling!</div></div>
   </div>
 
-  <div class="version-footer">V23 · 18th May 2026 · Precache Fix</div>
+  <div class="version-footer">V24 · 18th May 2026 · SW Cache Race Fix</div>
 
 </div>
 
@@ -1632,15 +1632,37 @@ async function precacheAllAudio() {
   // Save the list of files that actually exist so we don't keep retrying missing ones
   try { localStorage.setItem(PRECACHE_MANIFEST_KEY, JSON.stringify(succeeded)); } catch(e) {}
 
-  const ok = await isFullyCached(succeeded);
-  if (ok) {
+  // Find any successfully-fetched URLs that didn't end up in the cache and retry
+  let missingNow = await missingFromCache(succeeded);
+  if (missingNow.length > 0) {
+    showCacheBanner(`📥 Caching audio · retrying ${missingNow.length} files…`);
+    for (const u of missingNow) {
+      try { await fetch(u); } catch(e) {}
+    }
+  }
+
+  const finalMissing = await missingFromCache(succeeded);
+  if (finalMissing.length === 0) {
     showCacheBanner(`✓ ${succeeded.length} audio files cached — ready for offline use`, true);
     hideCacheBannerAfter(4000);
   } else {
-    const missing = succeeded.length - (await countCached(succeeded));
-    showCacheBanner(`⚠ ${missing} of ${succeeded.length} files didn't cache. Try again on a better connection.`, false);
+    showCacheBanner(`⚠ ${finalMissing.length} of ${succeeded.length} files didn't cache. Try again on a better connection.`, false);
     hideCacheBannerAfter(6000);
   }
+}
+
+async function missingFromCache(urls) {
+  if (!('caches' in window)) return urls;
+  try {
+    const names = await caches.keys();
+    const cached = new Set();
+    for (const n of names) {
+      const c = await caches.open(n);
+      const keys = await c.keys();
+      keys.forEach(r => cached.add(r.url));
+    }
+    return urls.filter(u => !cached.has(u));
+  } catch(e) { return urls; }
 }
 
 async function countCached(urls) {

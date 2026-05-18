@@ -1,4 +1,4 @@
-const CACHE = 'mnemonica-v23';
+const CACHE = 'mnemonica-v24';
 const STATIC = [
   '/mnemonica-audio/',
   '/mnemonica-audio/index.html',
@@ -26,7 +26,9 @@ self.addEventListener('fetch', e => {
         const cached = await cache.match(e.request);
         if (cached) return cached;
         const response = await fetch(e.request);
-        if (response.ok) cache.put(e.request, response.clone());
+        // Await the cache.put so the response only returns once the file is
+        // actually persisted — prevents race with isFullyCached() check.
+        if (response.ok) await cache.put(e.request, response.clone());
         return response;
       })
     );
