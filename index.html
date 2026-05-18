@@ -95,6 +95,17 @@ body {
 .mode-btn.active { background: rgba(201,168,76,0.2); color: var(--gold-light); }
 .mode-btn:hover:not(.active) { color: var(--cream); background: rgba(255,255,255,0.05); }
 .mode-btn.worst-btn.active { background: rgba(231,76,60,0.2); color: #e87070; border-color: rgba(231,76,60,0.4); }
+.mode-btn.smart-btn.active { background: rgba(241,196,15,0.18); color: #f1c40f; border-color: rgba(241,196,15,0.5); text-shadow: 0 0 8px rgba(241,196,15,0.4); }
+
+.smart-hint {
+  margin-top: 6px;
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: #f1c40f;
+  text-align: center;
+  opacity: 0.85;
+}
 
 .range-group { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--cream-dim); font-family: 'Cinzel', serif; }
 .range-group input[type=number] { width: 50px; padding: 6px 8px; font-size: 13px; font-family: 'Cinzel', serif; border: 1px solid var(--gold-dark); border-radius: 5px; background: rgba(0,0,0,0.3); color: var(--gold-light); text-align: center; }
@@ -714,9 +725,13 @@ canvas { display: block; width: 100% !important; }
         <div class="mode-row">
           <button class="mode-btn" id="btn-bef" onclick="toggleMode('card-before')">Card Before</button>
           <button class="mode-btn" id="btn-aft" onclick="toggleMode('card-after')">Card After</button>
+        </div>
+        <div class="mode-row">
           <button class="mode-btn worst-btn" id="btn-worst" onclick="toggleMode('worst-cards')">Worst Cards</button>
+          <button class="mode-btn smart-btn" id="btn-smart" onclick="toggleMode('smart-review')">Smart Review</button>
         </div>
       </div>
+      <div class="smart-hint" id="smart-hint" style="display:none"></div>
 
       <div class="settings-row">
         <div class="range-group">
@@ -802,7 +817,7 @@ canvas { display: block; width: 100% !important; }
     <div class="log-grid" id="log-grid"><div class="no-log">No sessions yet — start drilling!</div></div>
   </div>
 
-  <div class="version-footer">V19 · 18th May 2026 · Sprint Mode</div>
+  <div class="version-footer">V20 · 18th May 2026 · Smart Review</div>
 
 </div>
 
@@ -900,6 +915,7 @@ canvas { display: block; width: 100% !important; }
     </div>
 
     <button class="modal-save" onclick="saveSettingsModal()">Save Settings</button>
+    <button class="modal-save" onclick="clearSessionHistoryOnly()" style="margin-top:8px;background:rgba(241,196,15,0.08);border-color:rgba(241,196,15,0.5);color:#f1c40f;">Reset Session History</button>
     <button class="modal-save" onclick="resetTimingData()" style="margin-top:8px;background:rgba(231,76,60,0.08);border-color:rgba(231,76,60,0.5);color:#e87070;">Reset All Timing Data</button>
   </div>
 </div>
@@ -1121,6 +1137,7 @@ function autoSprintTimeout() {
   // Log as wrong (matches Wrong button behaviour so card lands in worst pile)
   const key = cardKey(card);
   addTiming(key, 9999);
+  updateFSRS(key, 9999, false);
   sessionTimings.push({ key, ms: 9999, pos: card.pos, v: card.v, s: card.s, qtype: card.qtype, wrong: true, timeout: true });
 
   // Briefly play the answer so the user learns the card
@@ -1159,6 +1176,118 @@ function getSlowCards() {
   }).sort((a, b) => (getCardAvg(cardKey(b)) || 0) - (getCardAvg(cardKey(a)) || 0));
   if (appSettings.worstCount > 0) return allCards.slice(0, appSettings.worstCount);
   return allCards;
+}
+
+/* ══════════════════════════════════════════
+   STACK-FSRS  (lightweight spaced repetition)
+   Per-card { s: stability, d: difficulty, due: session#, last: ts }
+══════════════════════════════════════════ */
+let cardFSRS = {};
+let fsrsSession = 0;
+let fsrsSessionConsumed = false; // ensures counter only bumps once per Smart Review session
+
+function seedFSRSCard(key) {
+  const arr = (cardTimings[key] || []).filter(t => t < 9000);
+  const target = appSettings.target;
+  if (arr.length === 0) {
+    cardFSRS[key] = { s: 0.5, d: 0.4, due: 0, last: 0 };
+    return;
+  }
+  const avg = arr.reduce((a,b)=>a+b, 0) / arr.length;
+  const sd = arr.length > 1
+    ? Math.sqrt(arr.reduce((a,t) => a + Math.pow(t-avg,2), 0) / arr.length)
+    : 0;
+  const cv = avg > 0 ? sd / avg : 0;
+
+  let s;
+  if      (avg <= target)         s = 4;
+  else if (avg <= target * 1.3)   s = 2.5;
+  else if (avg <= target * 2)     s = 1;
+  else                            s = 0.3;
+
+  let d = 0.3;
+  if (cv > 0.5) d = Math.min(1, d + 0.4);
+  if (avg > target * 2) d = Math.min(1, d + 0.2);
+
+  // Spread initial due across first few sessions to avoid 52-card first session
+  const initialDue = Math.floor(Math.random() * Math.max(1, Math.round(s)));
+  cardFSRS[key] = { s, d, due: initialDue, last: 0 };
+}
+
+function seedFSRSAll() {
+  STACK.forEach(c => {
+    const key = cardKey(c);
+    if (!cardFSRS[key]) seedFSRSCard(key);
+  });
+}
+
+function updateFSRS(key, elapsed, isCorrect) {
+  if (!cardFSRS[key]) seedFSRSCard(key);
+  const f = cardFSRS[key];
+  const target = appSettings.target;
+
+  if (!isCorrect) {
+    f.s = Math.max(0.25, f.s * 0.3);
+    f.d = Math.min(1, f.d + 0.15);
+  } else if (elapsed <= target) {
+    const ease = 2.2 - f.d;          // 1.2 to 2.2
+    f.s = f.s * ease;
+    f.d = Math.max(0, f.d - 0.05);
+  } else if (elapsed <= target * 1.5) {
+    f.s = f.s * 1.4;
+  } else {
+    f.s = f.s * 0.9;
+    f.d = Math.min(1, f.d + 0.05);
+  }
+
+  f.s = Math.max(0.25, Math.min(100, f.s));
+  f.due = fsrsSession + Math.max(1, Math.round(f.s));
+  f.last = Date.now();
+}
+
+function buildSmartReviewDeck(cards) {
+  seedFSRSAll();
+  // Only consume the session counter once per Smart Review session
+  if (!fsrsSessionConsumed) { fsrsSession++; fsrsSessionConsumed = true; }
+
+  const inRange = new Set(cards.map(c => c.pos));
+  const entries = STACK
+    .filter(c => inRange.has(c.pos))
+    .map(c => ({ card: c, f: cardFSRS[cardKey(c)] }));
+
+  let due = entries.filter(x => x.f.due <= fsrsSession);
+  due.sort((a, b) => {
+    const overA = fsrsSession - a.f.due;
+    const overB = fsrsSession - b.f.due;
+    if (overA !== overB) return overB - overA;
+    return b.f.d - a.f.d;
+  });
+
+  const MAX = 30, MIN = 10;
+  let chosen = due.slice(0, MAX);
+
+  if (chosen.length < MIN) {
+    const used = new Set(chosen.map(x => x.card.pos));
+    const topUp = entries
+      .filter(x => !used.has(x.card.pos))
+      .sort((a, b) => a.f.s - b.f.s)
+      .slice(0, MIN - chosen.length);
+    chosen = chosen.concat(topUp);
+  }
+
+  updateSmartHint(chosen.length, due.length);
+  return chosen.map(x => x.card);
+}
+
+function updateSmartHint(deckSize, dueCount) {
+  const el = document.getElementById('smart-hint');
+  if (!el) return;
+  if (!activeModes.has('smart-review')) { el.style.display = 'none'; return; }
+  const label = dueCount > deckSize
+    ? `Smart Review · ${deckSize} of ${dueCount} cards due`
+    : `Smart Review · ${deckSize} card${deckSize !== 1 ? 's' : ''} ready`;
+  el.textContent = label;
+  el.style.display = 'block';
 }
 
 /* ══════════════════════════════════════════
@@ -1312,17 +1441,21 @@ function buildDeck(cards) {
   const modes = [...activeModes];
   if (modes.length === 0) return shuffle(cards.map(c => ({...c, qtype:'pos-to-card'})));
 
+  if (modes.includes('smart-review')) {
+    const smart = buildSmartReviewDeck(cards);
+    const qtypeModes = modes.filter(m => m !== 'smart-review' && m !== 'worst-cards');
+    const qtypes = qtypeModes.length > 0 ? qtypeModes : ['pos-to-card'];
+    return shuffle(smart.map(c => ({...c, qtype: qtypes[Math.floor(Math.random() * qtypes.length)]})));
+  }
+
   if (modes.includes('worst-cards')) {
     const slow = getSlowCards();
     const otherModes = modes.filter(m => m !== 'worst-cards');
     const qtypes = otherModes.length > 0 ? otherModes : ['pos-to-card'];
     const sourceCards = slow.length > 0 ? slow : cards;
-    // Assign a random qtype from active modes to each card, then shuffle
     return shuffle(sourceCards.map(c => ({...c, qtype: qtypes[Math.floor(Math.random() * qtypes.length)]})));
   }
 
-  // For each card, create one entry per active mode, then shuffle the whole lot
-  // This gives true random interleaving of all mode types
   let all = [];
   modes.forEach(m => {
     let filtered = cards;
@@ -1334,18 +1467,31 @@ function buildDeck(cards) {
 }
 
 function toggleMode(m) {
-  const btnMap = {'pos-to-card':'ptc','card-to-pos':'ctp','card-before':'bef','card-after':'aft','worst-cards':'worst'};
+  const btnMap = {'pos-to-card':'ptc','card-to-pos':'ctp','card-before':'bef','card-after':'aft','worst-cards':'worst','smart-review':'smart'};
   if (activeModes.has(m)) {
     if (activeModes.size === 1) return;
     activeModes.delete(m);
     document.getElementById('btn-' + btnMap[m]).classList.remove('active');
   } else {
+    // Smart Review and Worst Cards are mutually exclusive
+    if (m === 'smart-review' && activeModes.has('worst-cards')) {
+      activeModes.delete('worst-cards');
+      document.getElementById('btn-worst').classList.remove('active');
+    } else if (m === 'worst-cards' && activeModes.has('smart-review')) {
+      activeModes.delete('smart-review');
+      document.getElementById('btn-smart').classList.remove('active');
+    }
     activeModes.add(m);
     document.getElementById('btn-' + btnMap[m]).classList.add('active');
   }
   if (running) stopPlay();
+  fsrsSessionConsumed = false;
   deck = buildDeck(getRange()); idx = 0; round = 1;
   updateProgress(); resetFaces(); saveSettings();
+  if (!activeModes.has('smart-review')) {
+    const hint = document.getElementById('smart-hint');
+    if (hint) hint.style.display = 'none';
+  }
 }
 
 /* ── Card rendering ── */
@@ -1649,6 +1795,7 @@ function answerCorrect() {
   if (!card || !running) return;
   const key = cardKey(card);
   addTiming(key, elapsed);
+  updateFSRS(key, elapsed, true);
   sessionTimings.push({ key, ms: elapsed, pos: card.pos, v: card.v, s: card.s, qtype: card.qtype });
   advanceCard();
 }
@@ -1661,6 +1808,7 @@ function answerWrong() {
   // Add a high synthetic time so card lands in worst pile immediately
   const key = cardKey(card);
   addTiming(key, 9999);
+  updateFSRS(key, 9999, false);
   sessionTimings.push({ key, ms: 9999, pos: card.pos, v: card.v, s: card.s, qtype: card.qtype, wrong: true });
   advanceCard();
 }
@@ -1766,6 +1914,7 @@ function startPlay() {
 function stopPlay() {
   running = false; sessionId++;
   waitingForTap = false;
+  fsrsSessionConsumed = false;
   stopSprintRing();
   clearAllTimers(); stopCurrentAudio(); stopBar();
   if (!timedMode && isWicked()) stopWicked();
@@ -2115,6 +2264,10 @@ async function saveTimedSession(secs) {
       data.timing[k] = arr;
     });
 
+    // Save FSRS state
+    data.fsrs = cardFSRS;
+    data.fsrsSession = fsrsSession;
+
     await saveBin(data);
     syncStatus('saved ✓'); setTimeout(() => syncStatus(''), 3000);
     renderLog(data);
@@ -2149,6 +2302,10 @@ async function renderLog(data) {
       cardTimings[k] = arr;
     });
   }
+
+  // Load FSRS state if present
+  if (data.fsrs) cardFSRS = data.fsrs;
+  if (typeof data.fsrsSession === 'number') fsrsSession = data.fsrsSession;
 
   let allTime = 0, todayTotal = 0;
   const today = todayKey();
@@ -2192,16 +2349,36 @@ async function clearLog() {
 }
 
 async function resetTimingData() {
-  if (!confirm('Reset all card timing data? This will clear per-card averages and your personal best. Practice time history is kept.')) return;
+  if (!confirm('Reset all card timing data? This will clear per-card averages, Smart Review schedule, and your personal best. Practice time history is kept.')) return;
   try {
     let data = await loadBin() || {};
     delete data.timing;
+    delete data.fsrs;
+    delete data.fsrsSession;
     await saveBin(data);
     cardTimings = {};
+    cardFSRS = {};
+    fsrsSession = 0;
     localStorage.removeItem('mnemonica_pb_avg');
     closeSettings();
     syncStatus('timing reset ✓'); setTimeout(() => syncStatus(''), 3000);
   } catch(e) { syncStatus('reset failed'); }
+}
+
+async function clearSessionHistoryOnly() {
+  if (!confirm('Clear practice history (daily session log)? Card timings, Smart Review schedule, and your personal best are kept.')) return;
+  try {
+    let data = await loadBin() || {};
+    // Keep only non-date keys
+    const preserved = {};
+    Object.entries(data).forEach(([k, v]) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) preserved[k] = v;
+    });
+    await saveBin(preserved);
+    closeSettings();
+    renderLog(preserved);
+    syncStatus('history cleared ✓'); setTimeout(() => syncStatus(''), 3000);
+  } catch(e) { syncStatus('clear failed'); }
 }
 
 /* ── Settings persistence ── */
@@ -2238,8 +2415,8 @@ function loadSettings() {
     }
     if (s.modes && Array.isArray(s.modes) && s.modes.length > 0) {
       activeModes = new Set(s.modes);
-      const btnMap = {'pos-to-card':'ptc','card-to-pos':'ctp','card-before':'bef','card-after':'aft','worst-cards':'worst'};
-      ['ptc','ctp','bef','aft','worst'].forEach(id => document.getElementById('btn-' + id).classList.remove('active'));
+      const btnMap = {'pos-to-card':'ptc','card-to-pos':'ctp','card-before':'bef','card-after':'aft','worst-cards':'worst','smart-review':'smart'};
+      ['ptc','ctp','bef','aft','worst','smart'].forEach(id => document.getElementById('btn-' + id).classList.remove('active'));
       activeModes.forEach(m => { if (btnMap[m]) document.getElementById('btn-' + btnMap[m]).classList.add('active'); });
     }
   } catch(e) {}
@@ -2474,7 +2651,15 @@ loadAppSettings();
 deck = buildDeck(getRange());
 updateProgress();
 reloadPhrases();
-renderLog().then(() => updateRankBadge());
+renderLog().then(() => {
+  updateRankBadge();
+  // Rebuild deck now that FSRS data is loaded — and refresh the Smart hint
+  if (activeModes.has('smart-review')) {
+    fsrsSessionConsumed = false;
+    deck = buildDeck(getRange());
+    updateProgress();
+  }
+});
 </script>
 </body>
 </html>
