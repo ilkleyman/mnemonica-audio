@@ -841,7 +841,7 @@ canvas { display: block; width: 100% !important; }
     <div class="log-grid" id="log-grid"><div class="no-log">No sessions yet — start drilling!</div></div>
   </div>
 
-  <div class="version-footer">V22 · 18th May 2026 · Audio Precache</div>
+  <div class="version-footer">V23 · 18th May 2026 · Precache Fix</div>
 
 </div>
 
@@ -1581,46 +1581,80 @@ function hideCacheBannerAfter(ms) {
   }, ms);
 }
 
-async function precacheAllAudio() {
-  const urls = collectAllAudioUrls();
-  if (urls.length === 0) return;
+const PRECACHE_MANIFEST_KEY = 'mnemonica_precache_urls';
 
-  if (await isFullyCached(urls)) {
-    showCacheBanner('✓ Ready for offline use', true);
-    hideCacheBannerAfter(2000);
-    return;
+function loadPrecacheManifest() {
+  try {
+    const raw = localStorage.getItem(PRECACHE_MANIFEST_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+async function precacheAllAudio() {
+  const candidates = collectAllAudioUrls();
+  if (candidates.length === 0) return;
+
+  // If we've successfully precached before, verify just those URLs
+  const manifest = loadPrecacheManifest();
+  if (manifest && manifest.length > 0) {
+    if (await isFullyCached(manifest)) {
+      showCacheBanner(`✓ Ready for offline use · ${manifest.length} files`, true);
+      hideCacheBannerAfter(2000);
+      return;
+    }
   }
 
   if (!navigator.onLine) {
-    showCacheBanner('⚠ Offline — some audio may be missing. Reconnect to finish caching.', false);
+    showCacheBanner('⚠ Offline — reconnect on wifi to finish caching audio.', false);
     hideCacheBannerAfter(5000);
     return;
   }
 
   let done = 0;
-  const total = urls.length;
+  const succeeded = [];
+  const total = candidates.length;
   showCacheBanner(`📥 Caching audio for offline use · 0 / ${total} · stay on wifi`);
 
   const PARALLEL = 6;
-  for (let i = 0; i < urls.length; i += PARALLEL) {
-    const batch = urls.slice(i, i + PARALLEL);
+  for (let i = 0; i < candidates.length; i += PARALLEL) {
+    const batch = candidates.slice(i, i + PARALLEL);
     await Promise.all(batch.map(u =>
-      fetch(u).catch(() => null).finally(() => {
-        done++;
-        showCacheBanner(`📥 Caching audio for offline use · ${done} / ${total} · stay on wifi`);
-      })
+      fetch(u)
+        .then(r => { if (r.ok) succeeded.push(u); })
+        .catch(() => null)
+        .finally(() => {
+          done++;
+          showCacheBanner(`📥 Caching audio for offline use · ${done} / ${total} · stay on wifi`);
+        })
     ));
   }
 
-  // Verify
-  const ok = await isFullyCached(urls);
+  // Save the list of files that actually exist so we don't keep retrying missing ones
+  try { localStorage.setItem(PRECACHE_MANIFEST_KEY, JSON.stringify(succeeded)); } catch(e) {}
+
+  const ok = await isFullyCached(succeeded);
   if (ok) {
-    showCacheBanner('✓ Audio cached — ready for offline use', true);
+    showCacheBanner(`✓ ${succeeded.length} audio files cached — ready for offline use`, true);
     hideCacheBannerAfter(4000);
   } else {
-    showCacheBanner('⚠ Some audio still missing. Try again on a better connection.', false);
+    const missing = succeeded.length - (await countCached(succeeded));
+    showCacheBanner(`⚠ ${missing} of ${succeeded.length} files didn't cache. Try again on a better connection.`, false);
     hideCacheBannerAfter(6000);
   }
+}
+
+async function countCached(urls) {
+  if (!('caches' in window)) return 0;
+  try {
+    const names = await caches.keys();
+    const cached = new Set();
+    for (const n of names) {
+      const c = await caches.open(n);
+      const keys = await c.keys();
+      keys.forEach(r => cached.add(r.url));
+    }
+    return urls.filter(u => cached.has(u)).length;
+  } catch(e) { return 0; }
 }
 
 function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
