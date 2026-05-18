@@ -460,6 +460,28 @@ body {
 /* ── Version footer ── */
 .version-footer { text-align: center; margin-top: 2rem; font-family: 'Cinzel', serif; font-size: 13px; color: rgba(201,168,76,0.35); letter-spacing: 0.1em; }
 
+/* ── Audio precache banner ── */
+.cache-banner {
+  margin: 0 auto 12px;
+  max-width: 380px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-align: center;
+  background: rgba(241,196,15,0.12);
+  border: 1px solid rgba(241,196,15,0.4);
+  color: #f1c40f;
+  transition: opacity 0.4s;
+}
+.cache-banner.done {
+  background: rgba(46,204,113,0.12);
+  border-color: rgba(46,204,113,0.4);
+  color: #2ecc71;
+}
+.cache-banner.fade { opacity: 0; }
+
 /* ══════════════════════════════════════════
    SETTINGS MODAL
 ══════════════════════════════════════════ */
@@ -698,6 +720,8 @@ canvas { display: block; width: 100% !important; }
     <div class="gold-rule"></div>
   </div>
 
+  <div class="cache-banner" id="cache-banner" style="display:none"></div>
+
   <div class="controls">
     <div class="mode-group">
       <div class="top-row">
@@ -817,7 +841,7 @@ canvas { display: block; width: 100% !important; }
     <div class="log-grid" id="log-grid"><div class="no-log">No sessions yet — start drilling!</div></div>
   </div>
 
-  <div class="version-footer">V21 · 18th May 2026 · Offline-First</div>
+  <div class="version-footer">V22 · 18th May 2026 · Audio Precache</div>
 
 </div>
 
@@ -1507,6 +1531,96 @@ async function reloadPhrases() {
   const SCODES = ['C','H','D','S'];
   VCODES.forEach(v => SCODES.forEach(s => preloadAudio(AUDIO_BASE + 'card_' + v + s + '.mp3')));
   for (let i = 1; i <= 52; i++) preloadAudio(AUDIO_BASE + 'pos_' + i + '.mp3');
+}
+
+/* ── Audio precache (offline-ready) ── */
+const _PRECACHE_VCODES = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const _PRECACHE_SCODES = ['C','H','D','S'];
+
+function collectAllAudioUrls() {
+  const out = [
+    ...cardPhrases, ...posPhrases, ...linkPhrases,
+    ...introPhrases, ...beforePhrases, ...afterPhrases
+  ];
+  _PRECACHE_VCODES.forEach(v => _PRECACHE_SCODES.forEach(s => {
+    out.push(AUDIO_BASE + 'card_' + v + s + '.mp3');
+  }));
+  for (let i = 1; i <= 52; i++) out.push(AUDIO_BASE + 'pos_' + i + '.mp3');
+  return out;
+}
+
+async function isFullyCached(urls) {
+  if (!('caches' in window)) return false;
+  try {
+    const names = await caches.keys();
+    const cached = new Set();
+    for (const n of names) {
+      const c = await caches.open(n);
+      const keys = await c.keys();
+      keys.forEach(r => cached.add(r.url));
+    }
+    return urls.every(u => cached.has(u));
+  } catch(e) { return false; }
+}
+
+function showCacheBanner(text, done) {
+  const b = document.getElementById('cache-banner');
+  if (!b) return;
+  b.style.display = 'block';
+  b.classList.remove('fade');
+  b.textContent = text;
+  b.classList.toggle('done', !!done);
+}
+
+function hideCacheBannerAfter(ms) {
+  const b = document.getElementById('cache-banner');
+  if (!b) return;
+  setTimeout(() => {
+    b.classList.add('fade');
+    setTimeout(() => { b.style.display = 'none'; }, 400);
+  }, ms);
+}
+
+async function precacheAllAudio() {
+  const urls = collectAllAudioUrls();
+  if (urls.length === 0) return;
+
+  if (await isFullyCached(urls)) {
+    showCacheBanner('✓ Ready for offline use', true);
+    hideCacheBannerAfter(2000);
+    return;
+  }
+
+  if (!navigator.onLine) {
+    showCacheBanner('⚠ Offline — some audio may be missing. Reconnect to finish caching.', false);
+    hideCacheBannerAfter(5000);
+    return;
+  }
+
+  let done = 0;
+  const total = urls.length;
+  showCacheBanner(`📥 Caching audio for offline use · 0 / ${total} · stay on wifi`);
+
+  const PARALLEL = 6;
+  for (let i = 0; i < urls.length; i += PARALLEL) {
+    const batch = urls.slice(i, i + PARALLEL);
+    await Promise.all(batch.map(u =>
+      fetch(u).catch(() => null).finally(() => {
+        done++;
+        showCacheBanner(`📥 Caching audio for offline use · ${done} / ${total} · stay on wifi`);
+      })
+    ));
+  }
+
+  // Verify
+  const ok = await isFullyCached(urls);
+  if (ok) {
+    showCacheBanner('✓ Audio cached — ready for offline use', true);
+    hideCacheBannerAfter(4000);
+  } else {
+    showCacheBanner('⚠ Some audio still missing. Try again on a better connection.', false);
+    hideCacheBannerAfter(6000);
+  }
 }
 
 function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -2728,7 +2842,7 @@ loadSettings();
 loadAppSettings();
 deck = buildDeck(getRange());
 updateProgress();
-reloadPhrases();
+reloadPhrases().then(() => precacheAllAudio());
 bootstrapData().then(() => {
   updateRankBadge();
   // Rebuild deck now that FSRS data is loaded — and refresh the Smart hint
