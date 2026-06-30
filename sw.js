@@ -1,4 +1,4 @@
-const CACHE = 'mnemonica-v26';
+const CACHE = 'mnemonica-v27';
 const STATIC = [
   '/mnemonica-audio/',
   '/mnemonica-audio/index.html',

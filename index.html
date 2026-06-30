@@ -1327,6 +1327,10 @@ let wickedTimer = null, wickedDelay = 5000;
 let sessionStart = null, sessionTimer = null, sessionSeconds = 0;
 let currentAudio = null;
 
+// Background keep-alive (prevents screen-off / pocket suspension)
+let keepAliveAudio = null;
+let wakeLock = null;
+
 // Timed mode per-session tracking
 let questionStartTime = null;
 let waitingForTap = false;
@@ -2176,6 +2180,84 @@ function showCard() {
   }, 680);
 }
 
+/* ── Background keep-alive ──
+   Keeps audio + timers running when the screen locks / phone is pocketed.
+   A silent looping track stops the page being frozen; MediaSession tells
+   the OS to treat us as a media app and gives lock-screen controls. */
+
+// Build a real silent WAV (actual duration) as a data URI — no network asset,
+// works fully offline. A zero-length clip wouldn't hold the page awake.
+function makeSilentWav(seconds) {
+  const rate = 8000, bytesPerSample = 2;
+  const dataSize = rate * seconds * bytesPerSample;
+  const buf = new ArrayBuffer(44 + dataSize);
+  const v = new DataView(buf);
+  const str = (off, s) => { for (let i = 0; i < s.length; i++) v.setUint8(off + i, s.charCodeAt(i)); };
+  str(0, 'RIFF'); v.setUint32(4, 36 + dataSize, true); str(8, 'WAVE');
+  str(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true); v.setUint32(28, rate * bytesPerSample, true);
+  v.setUint16(32, bytesPerSample, true); v.setUint16(34, 16, true);
+  str(36, 'data'); v.setUint32(40, dataSize, true);
+  let bin = ''; const bytes = new Uint8Array(buf);
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return 'data:audio/wav;base64,' + btoa(bin);
+}
+const SILENCE_URI = makeSilentWav(2);
+
+function startKeepAlive() {
+  try {
+    if (!keepAliveAudio) {
+      keepAliveAudio = new Audio(SILENCE_URI);
+      keepAliveAudio.loop = true;
+      keepAliveAudio.volume = 0;
+    }
+    keepAliveAudio.play().catch(() => {});
+  } catch (e) {}
+
+  if ('mediaSession' in navigator) {
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: 'Mnemonica — Auto Mode',
+        artist: 'Mnemonica Flashcards',
+        artwork: [
+          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' }
+        ]
+      });
+      navigator.mediaSession.playbackState = 'playing';
+      navigator.mediaSession.setActionHandler('pause', () => { if (running) stopPlay(); });
+      navigator.mediaSession.setActionHandler('play', () => { if (!running) startPlay(); });
+      navigator.mediaSession.setActionHandler('stop', () => { if (running) stopPlay(); });
+    } catch (e) {}
+  }
+}
+
+function stopKeepAlive() {
+  if (keepAliveAudio) { try { keepAliveAudio.pause(); } catch (e) {} }
+  if ('mediaSession' in navigator) {
+    try {
+      navigator.mediaSession.playbackState = 'none';
+      navigator.mediaSession.setActionHandler('pause', null);
+      navigator.mediaSession.setActionHandler('play', null);
+      navigator.mediaSession.setActionHandler('stop', null);
+    } catch (e) {}
+  }
+}
+
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { wakeLock = null; }
+}
+
+function releaseWakeLock() {
+  if (wakeLock) { try { wakeLock.release(); } catch (e) {} wakeLock = null; }
+}
+
+// Wake locks auto-release when the page is hidden; re-acquire on return.
+document.addEventListener('visibilitychange', () => {
+  if (running && wakeLock === null && document.visibilityState === 'visible') requestWakeLock();
+});
+
 function togglePlay() { if (running) stopPlay(); else startPlay(); }
 
 function startPlay() {
@@ -2193,6 +2275,8 @@ function startPlay() {
   if (!timedMode && isWicked()) startWicked();
   sessionStart = Date.now(); sessionSeconds = 0;
   sessionTimer = setInterval(tickSession, 1000);
+  startKeepAlive();
+  requestWakeLock();
   showCard();
 }
 
@@ -2202,6 +2286,7 @@ function stopPlay() {
   fsrsSessionConsumed = false;
   stopSprintRing();
   clearAllTimers(); stopCurrentAudio(); stopBar();
+  stopKeepAlive(); releaseWakeLock();
   if (!timedMode && isWicked()) stopWicked();
   clearInterval(sessionTimer);
   document.getElementById('play-btn').classList.remove('running');
