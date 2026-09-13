@@ -1802,6 +1802,12 @@ function renderBackPattern() {
   f.innerHTML = `<div class="card-back-svg">${CARD_BACK_SVG}</div>`;
 }
 
+// Empty the hidden back face. The back face must never hold the answer to a
+// question that hasn't been asked yet — see renderBack() below.
+function clearBack() {
+  document.getElementById('back-face').innerHTML = '';
+}
+
 function hideAnswerButtons() {
   const el = document.getElementById('answer-btns');
   if (el) el.style.display = 'none';
@@ -1902,6 +1908,9 @@ function renderFront(card) {
   }
 }
 
+// Render the answer onto the back face. Only ever call this immediately before
+// flipping the card: while a flip is in progress the back face can still be on
+// screen, so writing a future answer into it early flashes a spoiler.
 function renderBack(card) {
   const b = document.getElementById('back-face');
   b.className = 'card-face card-back';
@@ -2134,12 +2143,15 @@ function showCard() {
   t1 = setTimeout(() => {
     if (!running || sessionId !== mySession) return;
     renderBackPattern();
-    renderBack(card);
     updateProgress();
   }, 325);
 
   t2 = setTimeout(() => {
     if (!running || sessionId !== mySession) return;
+    // The 0.65s flip-back from the previous answer has finished by now, so the
+    // back face is safely out of sight and can be emptied. It stays empty until
+    // t3 fills it in the instant before this card's answer is flipped into view.
+    clearBack();
 
     const onReveal = () => {
       // intentionally empty — we don't reveal anything mid-audio
