@@ -181,8 +181,14 @@ body {
 .round-badge { font-size: 11px; font-family: 'Cinzel', serif; color: var(--gold-dark); background: rgba(201,168,76,0.1); border: 1px solid var(--gold-dark); border-radius: 999px; padding: 3px 10px; letter-spacing: 0.05em; }
 
 /* ── Card ── */
-.card-scene { display: flex; justify-content: center; perspective: 1200px; margin-bottom: 1rem; position: relative; }
-.card-inner { position: relative; width: 220px; height: 320px; transform-style: preserve-3d; transition: transform 0.65s cubic-bezier(0.4,0,0.2,1); background: var(--card-bg); border-radius: 16px; filter: drop-shadow(0 20px 40px rgba(0,0,0,0.7)); }
+/* The card's shadow lives on .card-scene, NOT on .card-inner. `filter` is a
+   grouping property: on the element that carries transform-style:preserve-3d
+   it forces a used value of `flat`, which collapses the two faces into one
+   plane — the back face gets culled by its own backface-visibility and the
+   flip just mirrors the front. Blink (Chrome, Edge, Android) does this, so
+   moving the shadow one level out is what keeps the answer visible there. */
+.card-scene { display: flex; justify-content: center; perspective: 1200px; margin-bottom: 1rem; position: relative; filter: drop-shadow(0 20px 40px rgba(0,0,0,0.7)); }
+.card-inner { position: relative; width: 220px; height: 320px; transform-style: preserve-3d; transition: transform 0.65s cubic-bezier(0.4,0,0.2,1); background: var(--card-bg); border-radius: 16px; }
 .card-scene.flipped .card-inner { transform: rotateY(180deg); }
 .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 16px; overflow: hidden; }
 
