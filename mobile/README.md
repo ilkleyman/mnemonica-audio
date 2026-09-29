@@ -17,15 +17,16 @@ Needs Node 20+. From this directory:
 npm install
 ```
 
-**Cloud build (no Android Studio):**
+**Cloud build on EAS — the default, no Android Studio needed:**
 
 ```sh
-npx eas login          # an Expo account, free tier is fine
+npx eas login
 npx eas build --platform android --profile preview
 ```
 
-The `preview` profile is set to `buildType: apk`, so it produces an installable
-APK rather than an AAB. EAS gives you a download link when it finishes.
+The `preview` profile sets `buildType: apk`, so you get an installable APK
+rather than an AAB, and `distribution: internal`, so EAS returns a QR code you
+can scan on the phone to install straight from it — no cable, no file copying.
 
 **Local build (needs Android Studio + SDK):**
 
@@ -46,9 +47,16 @@ on every prebuild.
 
 ## Releasing a new version
 
-Bump both in `app.json`: `expo.version` (shown to humans) and
-`expo.android.versionCode` (must increase for Android to treat it as an
-upgrade rather than refusing to install over the old one).
+`eas.json` sets `cli.appVersionSource: "remote"` with `autoIncrement`, so EAS
+owns `versionCode` and bumps it each build. Nothing to remember — you can't
+produce an APK Android refuses to install over the previous one.
+
+Bump `expo.version` in `app.json` only when you want the human-facing version
+string to change.
+
+EAS generates a signing keystore on the first build and keeps it. Let it —
+future builds must be signed with the same key or they won't install as an
+upgrade. `npx eas credentials` shows it.
 
 ## Notes
 
