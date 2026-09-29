@@ -7,8 +7,9 @@
     "start": "expo start",
     "android": "expo run:android",
     "prebuild": "expo prebuild --platform android --clean",
-    "apk:cloud": "eas build --platform android --profile preview",
-    "apk:local": "expo run:android --variant release"
+    "apk:local": "expo run:android --variant release",
+    "login": "eas login",
+    "apk": "eas build --platform android --profile preview"
   },
   "dependencies": {
     "expo": "~57.0.26",
@@ -19,5 +20,8 @@
     "react-native": "0.86.3",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-webview": "13.16.1"
+  },
+  "devDependencies": {
+    "eas-cli": "^24.8.0"
   }
 }

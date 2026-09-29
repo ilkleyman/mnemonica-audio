@@ -20,9 +20,14 @@ npm install
 **Cloud build on EAS — the default, no Android Studio needed:**
 
 ```sh
-npx eas login
-npx eas build --platform android --profile preview
+npm run login
+npm run apk
 ```
+
+`eas-cli` is a devDependency, so these work straight after `npm install`.
+Do NOT use `npx eas` — there is an unrelated `eas` package on npm with no
+executable, and npx picks that up and fails with "could not determine
+executable to run". The real CLI is `eas-cli`; its binary is just named `eas`.
 
 The `preview` profile sets `buildType: apk`, so you get an installable APK
 rather than an AAB, and `distribution: internal`, so EAS returns a QR code you
@@ -56,7 +61,7 @@ string to change.
 
 EAS generates a signing keystore on the first build and keeps it. Let it —
 future builds must be signed with the same key or they won't install as an
-upgrade. `npx eas credentials` shows it.
+upgrade. `npm exec -- eas credentials` shows it.
 
 ## Notes
 
